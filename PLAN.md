@@ -8,12 +8,14 @@ pause until the user says **continue**.
 
 - [x] 1. Bootstrap the plugin, visual shell, test harness, CI, development
       vault, project documentation, and public GitHub repository.
+- [x] 1a. Replace the original visual shell with one shared heading, unlabelled
+      columns, a uniform background, and a native right-sidebar inspector.
 - [ ] 2. Add the task domain model, validated persistent store, CRUD, tree
       invariants, completion/deletion cascades, and unit tests.
 - [ ] 3. Build Miller column navigation, task creation, inline rename,
       completion controls, and completed-task visibility.
-- [ ] 4. Add the persistent inspector, metadata fields, autosave, validation,
-      and overdue state.
+- [ ] 4. Add task details to the native right-sidebar inspector, metadata
+      fields, autosave, validation, and overdue state.
 - [ ] 5. Add ordering, cross-column drag-and-drop, tree moves, and destructive
       action confirmations.
 - [ ] 6. Add pasted and dropped image attachments, previews, opening, and
@@ -24,8 +26,10 @@ pause until the user says **continue**.
 ## Product constraints
 
 - One task tree, with root tasks at depth 1 and a maximum depth of 10.
-- Desktop-only, English UI, Obsidian-native appearance with Finder-like
-  hierarchy cues.
+- Desktop-only, English UI, one shared heading, unlabelled columns, a uniform
+  Obsidian background, and no decorative interface elements.
+- The task inspector is a separate ItemView in Obsidian's collapsible right
+  sidebar and never consumes space inside the column browser.
 - JSON persistence through the Obsidian plugin data API.
 - Manual ordering and drag-and-drop moves.
 - Completed tasks hidden by default and available through a global toggle.
@@ -34,5 +38,5 @@ pause until the user says **continue**.
 
 ## Current checkpoint
 
-Checkpoint 1 is complete. The next authorized work is checkpoint 2:
-the task domain model and persistent store.
+Checkpoint 1 and its minimal-interface correction are complete. The next
+authorized work is checkpoint 2: the task domain model and persistent store.

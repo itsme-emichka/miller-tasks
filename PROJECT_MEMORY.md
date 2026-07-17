@@ -4,14 +4,15 @@
 
 Miller Tasks is an Obsidian desktop plugin for navigating a recursive task tree
 as Miller columns. Selecting a task opens its direct children in the next
-column while a fixed inspector keeps the selected task's details editable.
+column. Task details live in a separate ItemView inside Obsidian's native,
+collapsible right sidebar.
 
 This file is maintained after every checkpoint so a future development session
 can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 1 of 7 complete.
+- Checkpoint: 1 of 7 plus the minimal-interface correction complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -19,27 +20,29 @@ can resume without reconstructing architecture or product decisions.
 - Minimum Obsidian version: `1.8.0`.
 - Next work: checkpoint 2, task model and persistent store.
 
-The current plugin registers an ItemView, ribbon action, and command. It mounts
-a React visual shell with a root column, a preview child column, the selected
-path rail, and a fixed empty inspector. No task data exists yet.
+The current plugin registers the task browser, a separate right-sidebar
+inspector, a ribbon action, and commands for opening both views. The main React
+view contains one shared heading and two empty unlabelled column shells. No task
+data exists yet.
 
 ## Architecture
 
 ```text
 MillerTasksPlugin
-└── MillerTasksView (Obsidian ItemView)
-    └── React root
-        └── MillerTasksApp
-            ├── toolbar
-            ├── selected-path rail
-            └── workspace
-                ├── horizontally scrolling columns
-                └── fixed inspector
+├── MillerTasksView (main Obsidian ItemView)
+│   └── React root
+│       └── MillerTasksApp
+│           ├── one shared heading
+│           └── horizontally scrolling unlabelled columns
+└── MillerTaskInspectorView
+    └── native Obsidian right-sidebar leaf
 ```
 
 - `src/main.ts` owns the Obsidian lifecycle, view registration, ribbon icon,
   command, and view activation.
 - `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
+- `src/view/MillerTaskInspectorView.ts` is registered separately and opened
+  through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
 - `src/ui/MillerTasksApp.tsx` owns the visual shell. Domain state will be
   injected rather than accessed through global Obsidian objects.
 - `styles.css` uses Obsidian theme variables. It does not impose a standalone
@@ -101,20 +104,26 @@ stored.
 
 ## Visual direction
 
-The UI inherits Obsidian colors and interface fonts. The signature element is
-the selected-path rail: an accent line that visually connects the current
-lineage across otherwise quiet columns. Structural labels such as “Level 1”
-encode real hierarchy depth rather than decorative numbering.
+The UI is intentionally reduced to the hierarchy itself:
+
+- One `Miller Tasks` heading spans the entire main view.
+- Columns have no visible headings, level labels, counters, path rail, status,
+  badges, instructional empty states, or embedded inspector.
+- Every surface uses `--background-primary`; columns differ only through a
+  one-pixel Obsidian border.
+- Typography comes entirely from Obsidian interface tokens.
+- The inspector is absent from the main view and uses the standard collapsible
+  right sidebar.
 
 The layout is:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ Miller Tasks                                  project state │
-├──────────────── selected path rail ─────────────────────────┤
-│ level 1 │ level 2 │ … horizontally scrollable │ inspector  │
-│ tasks   │ children│                           │ fixed       │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────┐ ┌───────────┐
+│ Miller Tasks                                  │ │ Obsidian  │
+├───────────────┬───────────────┬───────────────┤ │ right     │
+│               │               │               │ │ sidebar   │
+│   column      │   column      │      …        │ │ inspector │
+└───────────────┴───────────────┴───────────────┘ └───────────┘
 ```
 
 ## Development commands
@@ -149,7 +158,7 @@ At the end of every checkpoint:
   exist yet.
 - The development vault is local and ignored by Git.
 
-## Latest verification
+## Checkpoint 1 verification
 
 Checkpoint 1 was verified on 2026-07-17:
 
@@ -160,8 +169,24 @@ Checkpoint 1 was verified on 2026-07-17:
   `miller-tasks` in the isolated vault.
 - Obsidian 1.12.7 loaded the plugin in the isolated `dev-vault`.
 - The command `miller-tasks:open-task-browser` opened the custom ItemView.
-- The rendered view showed the root column, child preview, path rail, and fixed
-  inspector using the active Obsidian light theme.
+- The original rendered view showed the first visual-shell proposal. That
+  proposal was intentionally replaced by the later minimal-interface
+  correction.
+
+## Minimal-interface correction verification
+
+The correction was verified on 2026-07-17:
+
+- `npm run check`: lint, 2 of 2 UI tests, TypeScript, and production bundle
+  passed.
+- The rebuilt plugin loaded in the isolated Obsidian 1.12.7 dev-vault.
+- The main view contained exactly one heading, two column shells, no toolbar,
+  no path rail, no column headers, and no embedded inspector.
+- Computed backgrounds for the shell and every column were identical.
+- `miller-task-inspector-view` rendered inside
+  `.workspace-split.mod-right-split`.
+- Obsidian's built-in `app:toggle-right-sidebar` command collapsed that split
+  from 300 pixels to 0 and added `is-sidedock-collapsed`.
 
 ## Next exact task
 
