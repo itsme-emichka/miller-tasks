@@ -1,4 +1,21 @@
 import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   useEffect,
   useMemo,
   useState,
@@ -11,11 +28,23 @@ import type {
 
 import { isTaskOverdue } from "../domain/due";
 import { TaskStore } from "../domain/TaskStore";
-import { MAX_TASK_DEPTH, PluginData, TaskRecord } from "../domain/task";
+import {
+  MAX_TASK_DEPTH,
+  PluginData,
+  TaskRecord,
+} from "../domain/task";
+import {
+  performTaskDrop,
+  TaskDragData,
+  TaskDropData,
+  TaskDropPlacement,
+} from "./taskDrop";
 
 interface MillerTasksAppProps {
   store: TaskStore;
   onTaskSelected?: (taskId: string | null) => void;
+  onTaskCompletion?: (taskId: string, completed: boolean) => void;
+  onTaskMoveError?: (message: string) => void;
 }
 
 interface ColumnState {
@@ -27,6 +56,8 @@ interface ColumnState {
 export function MillerTasksApp({
   store,
   onTaskSelected,
+  onTaskCompletion,
+  onTaskMoveError,
 }: MillerTasksAppProps): JSX.Element {
   const snapshot = useTaskSnapshot(store);
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
@@ -36,7 +67,7 @@ export function MillerTasksApp({
 
   useEffect(() => {
     setSelectedPath((currentPath) =>
-      validateSelectedPath(currentPath, snapshot),
+      reconcileSelectedPath(currentPath, snapshot),
     );
   }, [snapshot]);
 
@@ -47,6 +78,14 @@ export function MillerTasksApp({
   const columns = useMemo(
     () => buildColumns(selectedPath),
     [selectedPath],
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const selectTask = (taskId: string, columnIndex: number): void => {
@@ -70,28 +109,66 @@ export function MillerTasksApp({
     onTaskSelected?.(created.id);
   };
 
+  const handleDragEnd = (event: DragEndEvent): void => {
+    if (!event.over) {
+      return;
+    }
+
+    const active = event.active.data.current as
+      | TaskDragData
+      | undefined;
+    const over = event.over.data.current as TaskDropData | undefined;
+    if (!active || active.type !== "task" || !over) {
+      return;
+    }
+
+    try {
+      performTaskDrop(
+        store,
+        active,
+        over,
+        getDropPlacement(event, active, over),
+      );
+    } catch (error) {
+      onTaskMoveError?.(
+        error instanceof Error ? error.message : "Task move failed.",
+      );
+    }
+  };
+
   return (
     <main className="miller-tasks-shell">
       <h1>Miller Tasks</h1>
-      <div
-        className="miller-tasks-columns"
-        aria-label="Task hierarchy columns"
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
       >
-        {columns.map((column, columnIndex) => (
-          <TaskColumn
-            key={column.parentId ?? "__root__"}
-            column={column}
-            tasks={getChildren(snapshot, column.parentId)}
-            columnIndex={columnIndex}
-            editingTaskId={editingTaskId}
-            onBeginEditing={setEditingTaskId}
-            onFinishEditing={() => setEditingTaskId(null)}
-            onSelectTask={selectTask}
-            onCreateTask={createTask}
-            store={store}
-          />
-        ))}
-      </div>
+        <div
+          className="miller-tasks-columns"
+          aria-label="Task hierarchy columns"
+        >
+          {columns.map((column, columnIndex) => (
+            <TaskColumn
+              key={column.parentId ?? "__root__"}
+              column={column}
+              tasks={getChildren(snapshot, column.parentId)}
+              columnIndex={columnIndex}
+              editingTaskId={editingTaskId}
+              onBeginEditing={setEditingTaskId}
+              onFinishEditing={() => setEditingTaskId(null)}
+              onSelectTask={selectTask}
+              onCreateTask={createTask}
+              onTaskCompletion={
+                onTaskCompletion ??
+                ((taskId, completed) =>
+                  store.completeSubtree(taskId, completed))
+              }
+              store={store}
+            />
+          ))}
+        </div>
+      </DndContext>
     </main>
   );
 }
@@ -109,6 +186,7 @@ interface TaskColumnProps {
     parentId: string | null,
     columnIndex: number,
   ) => void;
+  onTaskCompletion: (taskId: string, completed: boolean) => void;
   store: TaskStore;
 }
 
@@ -121,57 +199,96 @@ function TaskColumn({
   onFinishEditing,
   onSelectTask,
   onCreateTask,
+  onTaskCompletion,
   store,
 }: TaskColumnProps): JSX.Element {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column:${column.parentId ?? "__root__"}`,
+    data: {
+      type: "column",
+      parentId: column.parentId,
+      index: tasks.length,
+    } satisfies TaskDropData,
+  });
+
   return (
     <section
+      ref={setNodeRef}
       className="miller-tasks-column"
       aria-label={`Task level ${column.depth}`}
+      data-drop-target={isOver}
     >
-      <div className="miller-tasks-list">
-        {tasks.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            selected={column.selectedId === task.id}
-            editing={editingTaskId === task.id}
-            onBeginEditing={() => onBeginEditing(task.id)}
-            onFinishEditing={onFinishEditing}
-            onSelect={() => onSelectTask(task.id, columnIndex)}
-            store={store}
+      <SortableContext
+        items={tasks.map((task) => `task:${task.id}`)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="miller-tasks-list">
+          {tasks.map((task, taskIndex) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              taskIndex={taskIndex}
+              selected={column.selectedId === task.id}
+              editing={editingTaskId === task.id}
+              onBeginEditing={() => onBeginEditing(task.id)}
+              onFinishEditing={onFinishEditing}
+              onSelect={() => onSelectTask(task.id, columnIndex)}
+              onTaskCompletion={onTaskCompletion}
+              store={store}
+            />
+          ))}
+          <NewTaskInput
+            parentId={column.parentId}
+            onCreate={(title) =>
+              onCreateTask(title, column.parentId, columnIndex)
+            }
           />
-        ))}
-        <NewTaskInput
-          parentId={column.parentId}
-          onCreate={(title) =>
-            onCreateTask(title, column.parentId, columnIndex)
-          }
-        />
-      </div>
+        </div>
+      </SortableContext>
     </section>
   );
 }
 
 interface TaskRowProps {
   task: TaskRecord;
+  taskIndex: number;
   selected: boolean;
   editing: boolean;
   onBeginEditing: () => void;
   onFinishEditing: () => void;
   onSelect: () => void;
+  onTaskCompletion: (taskId: string, completed: boolean) => void;
   store: TaskStore;
 }
 
 function TaskRow({
   task,
+  taskIndex,
   selected,
   editing,
   onBeginEditing,
   onFinishEditing,
   onSelect,
+  onTaskCompletion,
   store,
 }: TaskRowProps): JSX.Element {
   const [draftTitle, setDraftTitle] = useState(task.title);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `task:${task.id}`,
+    data: {
+      type: "task",
+      taskId: task.id,
+      parentId: task.parentId,
+      index: taskIndex,
+    } satisfies TaskDragData,
+  });
 
   useEffect(() => {
     setDraftTitle(task.title);
@@ -200,10 +317,16 @@ function TaskRow({
 
   return (
     <div
+      ref={setNodeRef}
       className="miller-task-row"
       data-selected={selected}
       data-completed={task.completed}
       data-overdue={isTaskOverdue(task)}
+      data-dragging={isDragging}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
     >
       <input
         className="miller-task-checkbox"
@@ -211,7 +334,7 @@ function TaskRow({
         checked={task.completed}
         aria-label={`${task.completed ? "Reopen" : "Complete"} ${task.title}`}
         onChange={(event) =>
-          store.completeSubtree(task.id, event.currentTarget.checked)
+          onTaskCompletion(task.id, event.currentTarget.checked)
         }
       />
       {editing ? (
@@ -230,6 +353,8 @@ function TaskRow({
           type="button"
           onClick={onSelect}
           onDoubleClick={onBeginEditing}
+          {...attributes}
+          {...listeners}
         >
           {task.title}
         </button>
@@ -319,33 +444,74 @@ function getChildren(
     .sort((left, right) => left.order - right.order);
 }
 
-function validateSelectedPath(
+function reconcileSelectedPath(
   selectedPath: readonly string[],
   snapshot: PluginData,
 ): string[] {
-  const validPath: string[] = [];
-  let expectedParentId: string | null = null;
-
-  for (const taskId of selectedPath) {
-    const task = snapshot.tasks.find(
-      (candidate) => candidate.id === taskId,
-    );
-    if (
-      !task ||
-      task.parentId !== expectedParentId ||
-      (!snapshot.showCompleted && task.completed)
-    ) {
-      break;
+  for (let index = selectedPath.length - 1; index >= 0; index -= 1) {
+    const taskId = selectedPath[index];
+    if (!taskId) {
+      continue;
     }
-    validPath.push(taskId);
-    expectedParentId = taskId;
+    const path = buildAncestryPath(taskId, snapshot);
+    if (path) {
+      if (
+        path.length === selectedPath.length &&
+        path.every((id, pathIndex) => id === selectedPath[pathIndex])
+      ) {
+        return selectedPath as string[];
+      }
+      return path;
+    }
   }
 
-  if (
-    validPath.length === selectedPath.length &&
-    validPath.every((id, index) => id === selectedPath[index])
-  ) {
-    return selectedPath as string[];
+  return [];
+}
+
+function buildAncestryPath(
+  taskId: string,
+  snapshot: PluginData,
+): string[] | null {
+  const byId = new Map(snapshot.tasks.map((task) => [task.id, task]));
+  const reversedPath: string[] = [];
+  let current = byId.get(taskId);
+
+  while (current) {
+    if (!snapshot.showCompleted && current.completed) {
+      return null;
+    }
+    reversedPath.push(current.id);
+    current =
+      current.parentId === null ? undefined : byId.get(current.parentId);
   }
-  return validPath;
+
+  if (reversedPath.length === 0) {
+    return null;
+  }
+  return reversedPath.reverse();
+}
+
+function getDropPlacement(
+  event: DragEndEvent,
+  active: TaskDragData,
+  over: TaskDropData,
+): TaskDropPlacement {
+  if (over.type === "column" || active.parentId === over.parentId) {
+    return "inside";
+  }
+
+  const translated = event.active.rect.current.translated;
+  if (!translated || event.over === null || event.over.rect.height === 0) {
+    return "inside";
+  }
+
+  const center = translated.top + translated.height / 2;
+  const ratio = (center - event.over.rect.top) / event.over.rect.height;
+  if (ratio < 0.25) {
+    return "before";
+  }
+  if (ratio > 0.75) {
+    return "after";
+  }
+  return "inside";
 }

@@ -16,7 +16,7 @@ automatically while all checks are green.
       completion controls, and completed-task visibility.
 - [x] 4. Add task details to the native right-sidebar inspector, metadata
       fields, autosave, validation, and overdue state.
-- [ ] 5. Add ordering, cross-column drag-and-drop, tree moves, and destructive
+- [x] 5. Add ordering, cross-column drag-and-drop, tree moves, and destructive
       action confirmations.
 - [ ] 6. Add pasted and dropped image attachments, previews, opening, and
       confirmed trash behavior.
@@ -38,5 +38,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 4 is complete. The next work is checkpoint 5: drag-and-drop tree
-moves, manual ordering, and confirmations for destructive tree actions.
+Checkpoint 5 is complete. The next work is checkpoint 6: pasted and dropped
+image attachments with vault-backed previews and confirmed trash behavior.

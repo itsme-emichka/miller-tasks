@@ -8,6 +8,7 @@ import { TaskPersistence } from "./data/TaskPersistence";
 import { TaskStore } from "./domain/TaskStore";
 import { TaskDraftBuffer } from "./state/TaskDraftBuffer";
 import { TaskSelection } from "./state/TaskSelection";
+import { requestConfirmation } from "./view/ConfirmationModal";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
 import { MillerTasksView } from "./view/MillerTasksView";
 
@@ -46,9 +47,21 @@ export default class MillerTasksPlugin extends Plugin {
     this.registerView(
       MILLER_TASKS_VIEW_TYPE,
       (leaf) =>
-        new MillerTasksView(leaf, taskStore, (taskId) => {
-          this.selectTask(taskId);
-        }),
+        new MillerTasksView(
+          leaf,
+          taskStore,
+          (taskId) => {
+            this.selectTask(taskId);
+          },
+          {
+            completeTask: (taskId, completed) => {
+              void this.completeTask(taskId, completed);
+            },
+            reportMoveError: (message) => {
+              new Notice(message);
+            },
+          },
+        ),
     );
     this.registerView(
       MILLER_TASK_INSPECTOR_VIEW_TYPE,
@@ -89,6 +102,14 @@ export default class MillerTasksPlugin extends Plugin {
         taskStore.setShowCompleted(!snapshot.showCompleted);
       },
     });
+
+    this.addCommand({
+      id: "delete-selected-task",
+      name: "Delete selected task",
+      callback: () => {
+        void this.deleteSelectedTask();
+      },
+    });
   }
 
   override onunload(): void {
@@ -102,6 +123,60 @@ export default class MillerTasksPlugin extends Plugin {
     if (taskId !== null) {
       void this.activateInspector();
     }
+  }
+
+  private async completeTask(
+    taskId: string,
+    completed: boolean,
+  ): Promise<void> {
+    const taskStore = this.taskStore;
+    const task = taskStore?.getTask(taskId);
+    if (!taskStore || !task) {
+      return;
+    }
+
+    if (
+      completed &&
+      taskStore.getSubtreeSize(taskId) > 1 &&
+      !(await requestConfirmation(this.app, {
+        title: "Complete task and subtasks?",
+        message:
+          `"${task.title}" has subtasks. This will complete the ` +
+          "entire subtree.",
+        confirmLabel: "Complete all",
+      }))
+    ) {
+      return;
+    }
+
+    taskStore.completeSubtree(taskId, completed);
+  }
+
+  private async deleteSelectedTask(): Promise<void> {
+    const taskStore = this.taskStore;
+    const taskId = this.taskSelection.getSelectedTaskId();
+    const task = taskId ? taskStore?.getTask(taskId) : undefined;
+    if (!taskStore || !task) {
+      new Notice("Select a task to delete.");
+      return;
+    }
+
+    const subtreeSize = taskStore.getSubtreeSize(task.id);
+    const confirmed = await requestConfirmation(this.app, {
+      title: "Delete task?",
+      message:
+        subtreeSize === 1
+          ? `"${task.title}" will be deleted.`
+          : `"${task.title}" and ${subtreeSize - 1} subtasks will be deleted.`,
+      confirmLabel: "Delete",
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.taskDrafts?.flushAll();
+    taskStore.deleteSubtree(task.id);
+    this.taskSelection.setSelectedTaskId(null);
   }
 
   private async activateView(): Promise<void> {

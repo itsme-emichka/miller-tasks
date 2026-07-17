@@ -78,6 +78,10 @@ export class TaskStore {
     return depth;
   }
 
+  getSubtreeSize(id: string): number {
+    return this.getSubtreeIds(id).length;
+  }
+
   subscribe(listener: StoreListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

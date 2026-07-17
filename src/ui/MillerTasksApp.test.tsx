@@ -5,7 +5,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createDefaultPluginData } from "../domain/pluginData";
 import { TaskStore } from "../domain/TaskStore";
@@ -111,5 +111,49 @@ describe("MillerTasksApp", () => {
     expect(container.querySelectorAll(".miller-tasks-column")).toHaveLength(
       1,
     );
+  });
+
+  it("preserves the selected task after a valid tree move", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Parent" });
+    const child = store.createTask({
+      parentId: parent.id,
+      title: "Selected child",
+    });
+    const { container } = render(<MillerTasksApp store={store} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Parent" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Selected child" }),
+    );
+    void act(() => store.moveTask(child.id, null));
+
+    expect(
+      screen
+        .getByRole("button", { name: "Selected child" })
+        .closest(".miller-task-row"),
+    ).toHaveAttribute("data-selected", "true");
+    expect(container.querySelectorAll(".miller-tasks-column")).toHaveLength(
+      2,
+    );
+  });
+
+  it("delegates completion when confirmation behavior is provided", () => {
+    const store = createStore();
+    store.createTask({ title: "Parent" });
+    const completeTask = vi.fn();
+    render(
+      <MillerTasksApp
+        store={store}
+        onTaskCompletion={completeTask}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Parent" }),
+    );
+
+    expect(completeTask).toHaveBeenCalledWith("task-1", true);
+    expect(store.getTask("task-1")?.completed).toBe(false);
   });
 });

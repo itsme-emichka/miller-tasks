@@ -6,6 +6,11 @@ import { MILLER_TASKS_VIEW_TYPE } from "../constants";
 import { TaskStore } from "../domain/TaskStore";
 import { MillerTasksApp } from "../ui/MillerTasksApp";
 
+interface MillerTasksActions {
+  completeTask: (taskId: string, completed: boolean) => void;
+  reportMoveError: (message: string) => void;
+}
+
 export class MillerTasksView extends ItemView {
   private reactRoot: Root | null = null;
 
@@ -13,6 +18,7 @@ export class MillerTasksView extends ItemView {
     leaf: WorkspaceLeaf,
     private readonly taskStore: TaskStore,
     private readonly onTaskSelected: (taskId: string | null) => void,
+    private readonly actions: MillerTasksActions,
   ) {
     super(leaf);
   }
@@ -39,6 +45,8 @@ export class MillerTasksView extends ItemView {
         <MillerTasksApp
           store={this.taskStore}
           onTaskSelected={this.onTaskSelected}
+          onTaskCompletion={this.actions.completeTask}
+          onTaskMoveError={this.actions.reportMoveError}
         />
       </StrictMode>,
     );

@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 4 of 7 complete.
+- Checkpoint: 5 of 7 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 5, drag-and-drop moves and destructive confirmations.
+- Next work: checkpoint 6, image attachment file handling.
 
 The plugin loads validated schema-v1 task data before registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
@@ -62,7 +62,11 @@ MillerTasksPlugin
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
 - `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
-  selected ancestry path, and renders root and selected-child columns.
+  selected ancestry path, renders root and selected-child columns, and hosts
+  the shared `@dnd-kit` context.
+- `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
+- `src/view/ConfirmationModal.ts` provides native Obsidian confirmations for
+  parent completion and subtree deletion.
 - `src/ui/TaskInspectorApp.tsx` renders task metadata inside the native
   right sidebar. Date, time, priority, and flag save immediately.
 - `src/domain/due.ts` computes overdue state from local date/time strings.
@@ -112,6 +116,10 @@ stored.
 - Completing a task completes its entire subtree after UI confirmation.
 - Reopening a task reopens only that task.
 - Deleting a task removes the entire subtree after UI confirmation.
+- A row dropped on a row in another column becomes its child. Dropping near
+  that row's edge inserts beside it; dropping on column space moves to the end.
+- Rows in one column use sortable ordering. The selected task's ancestry path
+  is reconstructed after a valid move so the selection survives reparenting.
 
 ## Persistence decisions
 
@@ -174,11 +182,11 @@ At the end of every checkpoint:
 
 ## Known limitations
 
-- Parent completion currently executes immediately; checkpoint 5 adds the
-  required cascade confirmation.
 - Completed-task visibility is controlled through the command palette so the
   main view remains free of toolbar controls.
-- No drag-and-drop UI or attachment file handling exists yet.
+- Deletion is exposed as the `Delete selected task` command to keep destructive
+  controls out of the minimal column surface.
+- Attachment file handling does not exist yet.
 - The development vault is local and ignored by Git.
 
 ## Checkpoint 1 verification
@@ -247,13 +255,28 @@ The correction was verified on 2026-07-17:
 - The inspector remained outside the main Miller columns view and used the
   same primary background.
 
+## Checkpoint 5 verification
+
+- Twenty-six tests cover domain logic, persistence, navigation, inspector
+  editing, drop actions, selection preservation, and delegated completion.
+- `npm run check` passed with lint, all tests, TypeScript, and production
+  bundle green.
+- Pointer drag in Obsidian moved a root task onto a row in another column and
+  persisted the new parent.
+- Keyboard drag reordered siblings and persisted contiguous order values.
+- Moving a parent onto its descendant was rejected; the parent remained at the
+  root and Obsidian displayed the cycle-protection Notice.
+- Cancelling parent completion left the parent and all descendants incomplete.
+- Confirmed deletion removed a disposable selected task from persisted data.
+
 ## Next exact task
 
-Implement checkpoint 5:
+Implement checkpoint 6:
 
-1. Add sortable rows and droppable columns with `@dnd-kit`.
-2. Reorder siblings and move tasks between parents while preserving selection.
-3. Surface depth and cycle rejections through an Obsidian notice.
-4. Confirm parent completion before completing descendants.
-5. Confirm deletion before removing a task subtree.
+1. Store pasted and dropped images under
+   `Miller Tasks/Attachments/<task-id>/`.
+2. Add multiple compact previews to the native inspector.
+3. Open an attachment through Obsidian when its preview is activated.
+4. Confirm attachment removal and move its vault file to trash.
+5. Trash owned images before confirmed subtree deletion.
 6. Verify, document, commit, push, then continue automatically.
