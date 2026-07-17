@@ -69,7 +69,7 @@ MillerTasksPlugin
 - `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
   selected ancestry path, renders root and selected-child columns, and hosts
   the shared `@dnd-kit` context. It also owns Finder-style arrow navigation,
-  focus restoration, and automatic horizontal scrolling.
+  and focus restoration without moving the horizontal viewport.
 - `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
 - `src/view/ConfirmationModal.ts` provides native Obsidian confirmations for
   parent completion and subtree deletion.
@@ -303,13 +303,12 @@ The correction was verified on 2026-07-17:
 
 ## Checkpoint 7 verification
 
-- Thirty tests cover the domain, persistence, task/attachment services,
+- Thirty-one tests cover the domain, persistence, task/attachment services,
   inspector, Miller navigation, keyboard behavior, drop actions, and error
   preservation.
 - The UI created levels 1 through 10. A direct attempt at level 11 returned
   `TaskDomainError` with `depth-exceeded`; deleting the root removed all ten.
-- Arrow Right focused the next column, Arrow Left returned to the parent, and
-  the fourth column automatically scrolled into view (`scrollLeft: 484`).
+- Arrow Right focused the next column and Arrow Left returned to the parent.
 - A past-due task was red while incomplete, disappeared on completion, and
   returned without overdue state when completed tasks were shown.
 - The native inspector collapsed from 300 pixels to 0 through Obsidian's
@@ -333,7 +332,17 @@ The correction was verified on 2026-07-17:
 - Image attachments: `00923d0`
 - Beta polish: `f6f41de`
 - GitHub Actions Node 24 runtime update: `c1876a9`
-- Native checkbox-and-text task rows: the commit containing this documentation
+- Native checkbox-and-text task rows: `b6d7263`
+- Manual-only Miller viewport: the commit containing this documentation
+
+## Manual viewport correction
+
+- Selecting or creating a task never calls `scrollIntoView`.
+- Keyboard focus restoration uses `focus({ preventScroll: true })`.
+- A live pointer click with four rendered columns preserved the manually set
+  horizontal position exactly (`scrollLeft: 120` before and after).
+- Horizontal column movement is exclusively controlled by the user's mouse,
+  trackpad, scrollbar, or other native scrolling input.
 
 ## Native task-row correction verification
 
@@ -343,7 +352,8 @@ The correction was verified on 2026-07-17:
 - Computed task-row bottom border is `0px`; unselected text has `0px` border
   and no box shadow.
 - Selection is represented only by the existing two-pixel Finder accent.
-- `npm run check` remains green with 30 tests after the structural change.
+- `npm run check` remains green with 31 tests after the viewport regression
+  coverage.
 
 ## Resume point
 

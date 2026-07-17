@@ -198,4 +198,46 @@ describe("MillerTasksApp", () => {
       screen.getByRole("textbox", { name: "Rename Parent" }),
     ).toHaveFocus();
   });
+
+  it("leaves horizontal viewport movement under manual control", () => {
+    const originalScrollIntoView = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      "scrollIntoView",
+    );
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    try {
+      const store = createStore();
+      const parent = store.createTask({ title: "Parent" });
+      store.createTask({ parentId: parent.id, title: "Child" });
+      const { container } = render(<MillerTasksApp store={store} />);
+      const columns = container.querySelector<HTMLElement>(
+        ".miller-tasks-columns",
+      )!;
+      columns.scrollLeft = 73;
+
+      const parentTitle = screen.getByRole("button", {
+        name: "Parent",
+      });
+      fireEvent.click(parentTitle);
+      fireEvent.keyDown(parentTitle, { key: "ArrowRight" });
+
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      expect(columns.scrollLeft).toBe(73);
+    } finally {
+      if (originalScrollIntoView) {
+        Object.defineProperty(
+          Element.prototype,
+          "scrollIntoView",
+          originalScrollIntoView,
+        );
+      } else {
+        Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+      }
+    }
+  });
 });

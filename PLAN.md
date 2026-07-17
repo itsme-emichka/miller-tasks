@@ -24,6 +24,8 @@ automatically while all checks are green.
       documentation, run full QA, and prepare beta artifacts.
 - [x] 7a. Replace task title buttons with native-looking checkbox-and-text
       rows while preserving selection, keyboard, and drag behavior.
+- [x] 7b. Remove automatic column scrolling so horizontal viewport movement is
+      exclusively controlled by the user.
 
 ## Product constraints
 

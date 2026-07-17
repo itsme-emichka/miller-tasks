@@ -93,18 +93,6 @@ export function MillerTasksApp({
   }, [onTaskSelected, selectedPath]);
 
   useEffect(() => {
-    const columns = columnsElement.current;
-    if (!columns) {
-      return;
-    }
-
-    columns.lastElementChild?.scrollIntoView?.({
-      block: "nearest",
-      inline: "end",
-    });
-  }, [selectedPath]);
-
-  useEffect(() => {
     if (!focusRequest) {
       return;
     }
@@ -127,7 +115,7 @@ export function MillerTasksApp({
       : column?.querySelector<HTMLElement>(
           ".miller-task-title, .miller-new-task input",
         );
-    target?.focus();
+    target?.focus({ preventScroll: true });
     setFocusRequest(null);
   }, [focusRequest, selectedPath, snapshot]);
 
