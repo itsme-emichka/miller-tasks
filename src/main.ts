@@ -30,9 +30,16 @@ export default class MillerTasksPlugin extends Plugin {
       throw error;
     }
 
+    const taskStore = this.taskStore;
+    this.register(
+      taskStore.subscribeToPersistenceErrors(() => {
+        new Notice("Miller tasks could not save the latest changes.");
+      }),
+    );
+
     this.registerView(
       MILLER_TASKS_VIEW_TYPE,
-      (leaf) => new MillerTasksView(leaf),
+      (leaf) => new MillerTasksView(leaf, taskStore),
     );
     this.registerView(
       MILLER_TASK_INSPECTOR_VIEW_TYPE,
@@ -56,6 +63,15 @@ export default class MillerTasksPlugin extends Plugin {
       name: "Open task details",
       callback: () => {
         void this.activateInspector();
+      },
+    });
+
+    this.addCommand({
+      id: "toggle-completed-tasks",
+      name: "Toggle completed tasks",
+      callback: () => {
+        const snapshot = taskStore.getSnapshot();
+        taskStore.setShowCompleted(!snapshot.showCompleted);
       },
     });
   }

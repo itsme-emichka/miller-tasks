@@ -12,7 +12,7 @@ automatically while all checks are green.
       columns, a uniform background, and a native right-sidebar inspector.
 - [x] 2. Add the task domain model, validated persistent store, CRUD, tree
       invariants, completion/deletion cascades, and unit tests.
-- [ ] 3. Build Miller column navigation, task creation, inline rename,
+- [x] 3. Build Miller column navigation, task creation, inline rename,
       completion controls, and completed-task visibility.
 - [ ] 4. Add task details to the native right-sidebar inspector, metadata
       fields, autosave, validation, and overdue state.
@@ -38,5 +38,6 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 2 is complete. The next work is checkpoint 3: interactive Miller
-columns and basic task operations.
+Checkpoint 3 is complete. The next work is checkpoint 4: the native
+right-sidebar inspector, task metadata, autosave, validation, and overdue
+state.

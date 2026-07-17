@@ -12,18 +12,19 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 2 of 7 complete.
+- Checkpoint: 3 of 7 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 3, interactive Miller columns.
+- Next work: checkpoint 4, native right-sidebar task details and overdue state.
 
-The plugin now loads validated schema-v1 task data before registering views.
+The plugin loads validated schema-v1 task data before registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
 deletion cascades, metadata normalization, subscriptions, and queued saves.
-The React shell is still static until checkpoint 3.
+The main React view now renders the live task tree as horizontally scrolling
+Miller columns.
 
 ## Architecture
 
@@ -51,8 +52,8 @@ MillerTasksPlugin
 - `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
-- `src/ui/MillerTasksApp.tsx` owns the visual shell. Domain state will be
-  injected rather than accessed through global Obsidian objects.
+- `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
+  selected ancestry path, and renders root and selected-child columns.
 - `styles.css` uses Obsidian theme variables. It does not impose a standalone
   light or dark palette.
 - `scripts/setup-dev-vault.mjs` copies production artifacts into an ignored
@@ -60,7 +61,7 @@ MillerTasksPlugin
 
 ## Locked domain model
 
-Checkpoint 2 must introduce:
+Checkpoint 2 introduced:
 
 ```ts
 type Priority = "none" | "low" | "medium" | "high";
@@ -161,7 +162,10 @@ At the end of every checkpoint:
 
 ## Known limitations
 
-- The current shell is still static.
+- Parent completion currently executes immediately; checkpoint 5 adds the
+  required cascade confirmation.
+- Completed-task visibility is controlled through the command palette so the
+  main view remains free of toolbar controls.
 - No inspector form, drag-and-drop UI, or attachment file handling exists yet.
 - The development vault is local and ignored by Git.
 
@@ -195,17 +199,6 @@ The correction was verified on 2026-07-17:
 - Obsidian's built-in `app:toggle-right-sidebar` command collapsed that split
   from 300 pixels to 0 and added `is-sidedock-collapsed`.
 
-## Next exact task
-
-Implement checkpoint 3:
-
-1. Inject `TaskStore` into the React ItemView.
-2. Render root and selected-child columns without visible column headers.
-3. Add task creation, selection, inline rename, and completion controls.
-4. Add the completed-task visibility toggle without adding a toolbar.
-5. Keep selection paths valid after mutations and reloads.
-6. Verify, document, commit, push, then continue automatically.
-
 ## Checkpoint 2 verification
 
 - Schema-v1 data is validated before view registration.
@@ -214,3 +207,29 @@ Implement checkpoint 3:
   sibling order, moves, completion/reopen behavior, deletion cascades,
   metadata normalization, corrupted data, serialized writes, and reloads.
 - `npm run check` passed before commit.
+
+## Checkpoint 3 verification
+
+- Fourteen tests cover the domain and interactive task navigation.
+- UI tests verify the single-heading/no-chrome contract, creation, child
+  navigation, inline rename, hidden completion, and showing completed tasks.
+- `npm run check` passed with lint, all tests, TypeScript, and production
+  bundle green.
+- Obsidian 1.12.7 created a three-level path through the rendered UI and showed
+  four columns: root, children, grandchildren, and the empty next level.
+- Reloading the plugin restored all three task records from `data.json`.
+- The inspected view retained one heading, no column headers, and a uniform
+  `--background-primary` surface.
+
+## Next exact task
+
+Implement checkpoint 4:
+
+1. Share selected-task state between the main view and a native right-sidebar
+   inspector ItemView.
+2. Add description, tags, local due date/time, priority, flag, and URL fields.
+3. Debounce text saves by 400 ms and flush them on blur, task changes, and
+   plugin unload.
+4. Validate URLs and show errors without adding global interface chrome.
+5. Compute and render incomplete overdue tasks in red.
+6. Verify, document, commit, push, then continue automatically.
