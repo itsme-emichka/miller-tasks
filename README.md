@@ -4,8 +4,8 @@ Miller Tasks is a desktop task tracker for Obsidian. It will turn a deeply
 nested task tree into a horizontal Miller columns browser with task details in
 Obsidian's native right sidebar.
 
-> Development status: checkpoint 1 of 7 plus the minimal-interface correction
-> are complete. Task storage and interaction are not implemented yet.
+> Development status: checkpoint 2 of 7 is complete. The validated task model
+> and queued JSON persistence are ready; task interaction is next.
 
 ## Planned experience
 

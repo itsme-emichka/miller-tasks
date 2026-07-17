@@ -1,8 +1,8 @@
 # Miller Tasks implementation plan
 
 This file is the source of truth for checkpoint status. Every checkpoint ends
-with verification, one commit, one push to `main`, a result report, and a hard
-pause until the user says **continue**.
+with verification, one commit, and one push to `main`. Development continues
+automatically while all checks are green.
 
 ## Checkpoints
 
@@ -10,7 +10,7 @@ pause until the user says **continue**.
       vault, project documentation, and public GitHub repository.
 - [x] 1a. Replace the original visual shell with one shared heading, unlabelled
       columns, a uniform background, and a native right-sidebar inspector.
-- [ ] 2. Add the task domain model, validated persistent store, CRUD, tree
+- [x] 2. Add the task domain model, validated persistent store, CRUD, tree
       invariants, completion/deletion cascades, and unit tests.
 - [ ] 3. Build Miller column navigation, task creation, inline rename,
       completion controls, and completed-task visibility.
@@ -38,5 +38,5 @@ pause until the user says **continue**.
 
 ## Current checkpoint
 
-Checkpoint 1 and its minimal-interface correction are complete. The next
-authorized work is checkpoint 2: the task domain model and persistent store.
+Checkpoint 2 is complete. The next work is checkpoint 3: interactive Miller
+columns and basic task operations.

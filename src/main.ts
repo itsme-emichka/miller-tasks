@@ -1,14 +1,35 @@
-import { Plugin, WorkspaceLeaf } from "obsidian";
+import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
 
 import {
   MILLER_TASK_INSPECTOR_VIEW_TYPE,
   MILLER_TASKS_VIEW_TYPE,
 } from "./constants";
+import { TaskPersistence } from "./data/TaskPersistence";
+import { TaskStore } from "./domain/TaskStore";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
 import { MillerTasksView } from "./view/MillerTasksView";
 
 export default class MillerTasksPlugin extends Plugin {
+  private taskStore: TaskStore | null = null;
+
   override async onload(): Promise<void> {
+    const persistence = new TaskPersistence(
+      () => this.loadData(),
+      (data) => this.saveData(data),
+    );
+
+    try {
+      this.taskStore = new TaskStore(
+        await persistence.load(),
+        persistence,
+      );
+    } catch (error) {
+      new Notice(
+        "Miller tasks data is invalid. The plugin was not loaded to protect your tasks.",
+      );
+      throw error;
+    }
+
     this.registerView(
       MILLER_TASKS_VIEW_TYPE,
       (leaf) => new MillerTasksView(leaf),
@@ -37,6 +58,10 @@ export default class MillerTasksPlugin extends Plugin {
         void this.activateInspector();
       },
     });
+  }
+
+  override onunload(): void {
+    void this.taskStore?.flush().catch(() => undefined);
   }
 
   private async activateView(): Promise<void> {

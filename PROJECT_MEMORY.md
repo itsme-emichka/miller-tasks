@@ -12,23 +12,27 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 1 of 7 plus the minimal-interface correction complete.
+- Checkpoint: 2 of 7 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 2, task model and persistent store.
+- Next work: checkpoint 3, interactive Miller columns.
 
-The current plugin registers the task browser, a separate right-sidebar
-inspector, a ribbon action, and commands for opening both views. The main React
-view contains one shared heading and two empty unlabelled column shells. No task
-data exists yet.
+The plugin now loads validated schema-v1 task data before registering views.
+`TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
+deletion cascades, metadata normalization, subscriptions, and queued saves.
+The React shell is still static until checkpoint 3.
 
 ## Architecture
 
 ```text
 MillerTasksPlugin
+├── TaskPersistence
+│   └── validated load + serialized snapshot writes
+├── TaskStore
+│   └── task graph, invariants, CRUD, subscriptions
 ├── MillerTasksView (main Obsidian ItemView)
 │   └── React root
 │       └── MillerTasksApp
@@ -39,7 +43,11 @@ MillerTasksPlugin
 ```
 
 - `src/main.ts` owns the Obsidian lifecycle, view registration, ribbon icon,
-  command, and view activation.
+  commands, data loading, and store lifetime.
+- `src/domain/TaskStore.ts` is the only mutation boundary for task data.
+- `src/domain/pluginData.ts` validates stored data and normalizes user input.
+- `src/data/TaskPersistence.ts` serializes immutable snapshots through
+  `Plugin.loadData()` and `Plugin.saveData()`.
 - `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
@@ -149,13 +157,12 @@ At the end of every checkpoint:
 4. Create exactly one checkpoint commit.
 5. Push `main`.
 6. Report the commit, checks, and visual result when applicable.
-7. Stop until the user says **continue**.
+7. Continue automatically when checks are green unless the user redirects.
 
 ## Known limitations
 
-- The current shell is intentionally static.
-- No task model, persistence, inspector form, drag-and-drop, or attachments
-  exist yet.
+- The current shell is still static.
+- No inspector form, drag-and-drop UI, or attachment file handling exists yet.
 - The development vault is local and ignored by Git.
 
 ## Checkpoint 1 verification
@@ -190,11 +197,20 @@ The correction was verified on 2026-07-17:
 
 ## Next exact task
 
-Implement checkpoint 2 only:
+Implement checkpoint 3:
 
-1. Add the TypeScript domain types and schema defaults.
-2. Add validation for data loaded from Obsidian.
-3. Add an in-memory tree service with CRUD and tree invariants.
-4. Add a persistence adapter with serialized saves.
-5. Add unit tests for depth, cycles, ordering, cascades, and reload behavior.
-6. Update this memory and `PLAN.md`, verify, commit once, push, report, stop.
+1. Inject `TaskStore` into the React ItemView.
+2. Render root and selected-child columns without visible column headers.
+3. Add task creation, selection, inline rename, and completion controls.
+4. Add the completed-task visibility toggle without adding a toolbar.
+5. Keep selection paths valid after mutations and reloads.
+6. Verify, document, commit, push, then continue automatically.
+
+## Checkpoint 2 verification
+
+- Schema-v1 data is validated before view registration.
+- New vaults receive empty defaults without writing until a mutation.
+- Twelve tests cover depth 10, level-11 rejection, cycles, subtree depth,
+  sibling order, moves, completion/reopen behavior, deletion cascades,
+  metadata normalization, corrupted data, serialized writes, and reloads.
+- `npm run check` passed before commit.
