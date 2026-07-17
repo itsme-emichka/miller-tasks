@@ -20,7 +20,7 @@ automatically while all checks are green.
       action confirmations.
 - [x] 6. Add pasted and dropped image attachments, previews, opening, and
       confirmed trash behavior.
-- [ ] 7. Polish both Obsidian themes, keyboard and focus behavior, finish
+- [x] 7. Polish both Obsidian themes, keyboard and focus behavior, finish
       documentation, run full QA, and prepare beta artifacts.
 
 ## Product constraints
@@ -38,5 +38,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 6 is complete. The next work is checkpoint 7: keyboard and theme
-polish, final documentation, full vault QA, and beta artifacts.
+All seven checkpoints are complete. The first beta prototype is ready for
+installation and feedback.

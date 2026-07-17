@@ -12,13 +12,14 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 6 of 7 complete.
+- Checkpoint: 7 of 7 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 7, beta polish, documentation, artifacts, and full QA.
+- Next work: collect beta feedback and triage issues; no planned checkpoint
+  remains.
 
 The plugin loads validated schema-v1 task data before registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
@@ -67,7 +68,8 @@ MillerTasksPlugin
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
 - `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
   selected ancestry path, renders root and selected-child columns, and hosts
-  the shared `@dnd-kit` context.
+  the shared `@dnd-kit` context. It also owns Finder-style arrow navigation,
+  focus restoration, and automatic horizontal scrolling.
 - `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
 - `src/view/ConfirmationModal.ts` provides native Obsidian confirmations for
   parent completion and subtree deletion.
@@ -199,6 +201,8 @@ At the end of every checkpoint:
   controls out of the minimal column surface.
 - Empty attachment folders are currently retained after their last file moves
   to trash; they are harmless and keep filesystem logic conservative.
+- This is a source beta, not an Obsidian community-plugin release. Installation
+  currently requires building and copying the three artifacts.
 - The development vault is local and ignored by Git.
 
 ## Checkpoint 1 verification
@@ -295,13 +299,40 @@ The correction was verified on 2026-07-17:
 - The attachment grid stayed inside the native 300-pixel right sidebar and
   retained the primary Obsidian background.
 
-## Next exact task
+## Checkpoint 7 verification
 
-Implement checkpoint 7:
+- Thirty tests cover the domain, persistence, task/attachment services,
+  inspector, Miller navigation, keyboard behavior, drop actions, and error
+  preservation.
+- The UI created levels 1 through 10. A direct attempt at level 11 returned
+  `TaskDomainError` with `depth-exceeded`; deleting the root removed all ten.
+- Arrow Right focused the next column, Arrow Left returned to the parent, and
+  the fourth column automatically scrolled into view (`scrollLeft: 484`).
+- A past-due task was red while incomplete, disappeared on completion, and
+  returned without overdue state when completed tasks were shown.
+- The native inspector collapsed from 300 pixels to 0 through Obsidian's
+  built-in right-sidebar command.
+- In the tested light theme, shell, every column, and inspector all computed to
+  `rgb(255, 255, 255)`. In dark, all computed to `rgb(30, 30, 30)`.
+- With reduced motion enabled, task-row transition duration computed to `0s`.
+- `main.js`, `manifest.json`, and `styles.css` were rebuilt and installed into
+  the isolated Obsidian 1.12.7 vault.
+- `npm run check` passed with lint, all tests, TypeScript, and the production
+  bundle green.
 
-1. Finish arrow-key navigation, focus behavior, and automatic column scrolling.
-2. Verify reduced motion and both light and dark Obsidian themes.
-3. Complete installation, usage, data, and development documentation.
-4. Run the full automated suite and all mandatory manual vault scenarios.
-5. Confirm beta artifacts `main.js`, `manifest.json`, and `styles.css`.
-6. Commit, push, verify GitHub CI, and hand off the first beta prototype.
+## Checkpoint commits
+
+- Bootstrap: `ff535e3`
+- Minimal-interface correction: `f6b9bd8`
+- Task model and store: `a2167a9`
+- Miller navigation: `ecba301`
+- Inspector and due state: `76c06c5`
+- Drag-and-drop actions: `0f59942`
+- Image attachments: `00923d0`
+- Beta polish: the commit containing this documentation
+
+## Resume point
+
+The planned beta is complete. Start future work from a reported issue or a
+newly approved post-beta scope. Preserve schema version 1 compatibility unless
+a documented migration is added.

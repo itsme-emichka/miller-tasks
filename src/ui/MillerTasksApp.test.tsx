@@ -156,4 +156,39 @@ describe("MillerTasksApp", () => {
     expect(completeTask).toHaveBeenCalledWith("task-1", true);
     expect(store.getTask("task-1")?.completed).toBe(false);
   });
+
+  it("navigates rows and columns from the keyboard", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Parent" });
+    store.createTask({ parentId: parent.id, title: "Child" });
+    store.createTask({ title: "Sibling" });
+    render(<MillerTasksApp store={store} />);
+
+    const parentButton = screen.getByRole("button", {
+      name: "Parent",
+    });
+    parentButton.focus();
+    fireEvent.keyDown(parentButton, { key: "ArrowDown" });
+    const siblingButton = screen.getByRole("button", {
+      name: "Sibling",
+    });
+    expect(siblingButton).toHaveFocus();
+    expect(siblingButton.closest(".miller-task-row")).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
+
+    parentButton.focus();
+    fireEvent.keyDown(parentButton, { key: "ArrowRight" });
+    const childButton = screen.getByRole("button", { name: "Child" });
+    expect(childButton).toHaveFocus();
+
+    fireEvent.keyDown(childButton, { key: "ArrowLeft" });
+    expect(parentButton).toHaveFocus();
+
+    fireEvent.keyDown(parentButton, { key: "F2" });
+    expect(
+      screen.getByRole("textbox", { name: "Rename Parent" }),
+    ).toHaveFocus();
+  });
 });

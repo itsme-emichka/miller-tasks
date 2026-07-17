@@ -18,6 +18,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type {
@@ -53,6 +54,19 @@ interface ColumnState {
   selectedId: string | null;
 }
 
+type KeyboardNavigation =
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "home"
+  | "end";
+
+interface FocusRequest {
+  columnIndex: number;
+  taskId: string | null;
+}
+
 export function MillerTasksApp({
   store,
   onTaskSelected,
@@ -64,6 +78,9 @@ export function MillerTasksApp({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(
     null,
   );
+  const [focusRequest, setFocusRequest] =
+    useState<FocusRequest | null>(null);
+  const columnsElement = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setSelectedPath((currentPath) =>
@@ -74,6 +91,45 @@ export function MillerTasksApp({
   useEffect(() => {
     onTaskSelected?.(selectedPath.at(-1) ?? null);
   }, [onTaskSelected, selectedPath]);
+
+  useEffect(() => {
+    const columns = columnsElement.current;
+    if (!columns) {
+      return;
+    }
+
+    columns.lastElementChild?.scrollIntoView?.({
+      block: "nearest",
+      inline: "end",
+    });
+  }, [selectedPath]);
+
+  useEffect(() => {
+    if (!focusRequest) {
+      return;
+    }
+
+    const column =
+      columnsElement.current?.querySelectorAll<HTMLElement>(
+        ".miller-tasks-column",
+      )[focusRequest.columnIndex];
+    const rows = column?.querySelectorAll<HTMLElement>(
+      ".miller-task-row",
+    );
+    const row = focusRequest.taskId
+      ? Array.from(rows ?? []).find(
+          (candidate) =>
+            candidate.dataset.taskId === focusRequest.taskId,
+        )
+      : undefined;
+    const target = row
+      ? row.querySelector<HTMLElement>(".miller-task-title")
+      : column?.querySelector<HTMLElement>(
+          ".miller-task-title, .miller-new-task input",
+        );
+    target?.focus();
+    setFocusRequest(null);
+  }, [focusRequest, selectedPath, snapshot]);
 
   const columns = useMemo(
     () => buildColumns(selectedPath),
@@ -136,6 +192,56 @@ export function MillerTasksApp({
     }
   };
 
+  const handleKeyboardNavigation = (
+    direction: KeyboardNavigation,
+    task: TaskRecord,
+    taskIndex: number,
+    columnIndex: number,
+    tasks: readonly TaskRecord[],
+  ): void => {
+    if (direction === "right") {
+      if (columnIndex < MAX_TASK_DEPTH - 1) {
+        selectTask(task.id, columnIndex);
+        setFocusRequest({
+          columnIndex: columnIndex + 1,
+          taskId: null,
+        });
+      }
+      return;
+    }
+
+    if (direction === "left") {
+      const parentId = selectedPath[columnIndex - 1];
+      if (columnIndex > 0 && parentId) {
+        setSelectedPath((currentPath) =>
+          currentPath.slice(0, columnIndex),
+        );
+        onTaskSelected?.(parentId);
+        setFocusRequest({
+          columnIndex: columnIndex - 1,
+          taskId: parentId,
+        });
+      }
+      return;
+    }
+
+    const targetIndex =
+      direction === "home"
+        ? 0
+        : direction === "end"
+          ? tasks.length - 1
+          : taskIndex + (direction === "down" ? 1 : -1);
+    const target = tasks[targetIndex];
+    if (!target) {
+      return;
+    }
+    selectTask(target.id, columnIndex);
+    setFocusRequest({
+      columnIndex,
+      taskId: target.id,
+    });
+  };
+
   return (
     <main className="miller-tasks-shell">
       <h1>Miller Tasks</h1>
@@ -145,6 +251,7 @@ export function MillerTasksApp({
         onDragEnd={handleDragEnd}
       >
         <div
+          ref={columnsElement}
           className="miller-tasks-columns"
           aria-label="Task hierarchy columns"
         >
@@ -159,6 +266,7 @@ export function MillerTasksApp({
               onFinishEditing={() => setEditingTaskId(null)}
               onSelectTask={selectTask}
               onCreateTask={createTask}
+              onKeyboardNavigate={handleKeyboardNavigation}
               onTaskCompletion={
                 onTaskCompletion ??
                 ((taskId, completed) =>
@@ -187,6 +295,13 @@ interface TaskColumnProps {
     columnIndex: number,
   ) => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  onKeyboardNavigate: (
+    direction: KeyboardNavigation,
+    task: TaskRecord,
+    taskIndex: number,
+    columnIndex: number,
+    tasks: readonly TaskRecord[],
+  ) => void;
   store: TaskStore;
 }
 
@@ -200,6 +315,7 @@ function TaskColumn({
   onSelectTask,
   onCreateTask,
   onTaskCompletion,
+  onKeyboardNavigate,
   store,
 }: TaskColumnProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({
@@ -234,6 +350,15 @@ function TaskColumn({
               onFinishEditing={onFinishEditing}
               onSelect={() => onSelectTask(task.id, columnIndex)}
               onTaskCompletion={onTaskCompletion}
+              onKeyboardNavigate={(direction) =>
+                onKeyboardNavigate(
+                  direction,
+                  task,
+                  taskIndex,
+                  columnIndex,
+                  tasks,
+                )
+              }
               store={store}
             />
           ))}
@@ -258,6 +383,7 @@ interface TaskRowProps {
   onFinishEditing: () => void;
   onSelect: () => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  onKeyboardNavigate: (direction: KeyboardNavigation) => void;
   store: TaskStore;
 }
 
@@ -270,6 +396,7 @@ function TaskRow({
   onFinishEditing,
   onSelect,
   onTaskCompletion,
+  onKeyboardNavigate,
   store,
 }: TaskRowProps): JSX.Element {
   const [draftTitle, setDraftTitle] = useState(task.title);
@@ -315,6 +442,38 @@ function TaskRow({
     }
   };
 
+  const handleTaskKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+  ): void => {
+    if (isDragging) {
+      listeners?.onKeyDown?.(event);
+      return;
+    }
+
+    const navigationKeys: Partial<
+      Record<string, KeyboardNavigation>
+    > = {
+      ArrowUp: "up",
+      ArrowDown: "down",
+      ArrowLeft: "left",
+      ArrowRight: "right",
+      Home: "home",
+      End: "end",
+    };
+    const direction = navigationKeys[event.key];
+    if (direction) {
+      event.preventDefault();
+      onKeyboardNavigate(direction);
+      return;
+    }
+    if (event.key === "F2") {
+      event.preventDefault();
+      onBeginEditing();
+      return;
+    }
+    listeners?.onKeyDown?.(event);
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -323,6 +482,7 @@ function TaskRow({
       data-completed={task.completed}
       data-overdue={isTaskOverdue(task)}
       data-dragging={isDragging}
+      data-task-id={task.id}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -355,6 +515,7 @@ function TaskRow({
           onDoubleClick={onBeginEditing}
           {...attributes}
           {...listeners}
+          onKeyDown={handleTaskKeyDown}
         >
           {task.title}
         </button>
