@@ -329,7 +329,9 @@ The correction was verified on 2026-07-17:
 - Inspector and due state: `76c06c5`
 - Drag-and-drop actions: `0f59942`
 - Image attachments: `00923d0`
-- Beta polish: the commit containing this documentation
+- Beta polish: `f6f41de`
+- GitHub Actions Node 24 runtime update: the commit containing this
+  documentation
 
 ## Resume point
 
