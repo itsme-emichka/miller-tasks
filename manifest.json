@@ -1,0 +1,10 @@
+{
+  "id": "miller-tasks",
+  "name": "Miller Tasks",
+  "version": "0.1.0",
+  "minAppVersion": "1.8.0",
+  "description": "Navigate a deeply nested task tree with Miller columns.",
+  "author": "Emilar Loktev",
+  "authorUrl": "https://github.com/itsme-emichka",
+  "isDesktopOnly": true
+}
