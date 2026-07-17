@@ -18,7 +18,7 @@ automatically while all checks are green.
       fields, autosave, validation, and overdue state.
 - [x] 5. Add ordering, cross-column drag-and-drop, tree moves, and destructive
       action confirmations.
-- [ ] 6. Add pasted and dropped image attachments, previews, opening, and
+- [x] 6. Add pasted and dropped image attachments, previews, opening, and
       confirmed trash behavior.
 - [ ] 7. Polish both Obsidian themes, keyboard and focus behavior, finish
       documentation, run full QA, and prepare beta artifacts.
@@ -38,5 +38,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 5 is complete. The next work is checkpoint 6: pasted and dropped
-image attachments with vault-backed previews and confirmed trash behavior.
+Checkpoint 6 is complete. The next work is checkpoint 7: keyboard and theme
+polish, final documentation, full vault QA, and beta artifacts.

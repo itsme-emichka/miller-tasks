@@ -82,6 +82,12 @@ export class TaskStore {
     return this.getSubtreeIds(id).length;
   }
 
+  getSubtree(id: string): TaskRecord[] {
+    return this.getSubtreeIds(id).map((taskId) =>
+      cloneTask(this.requireTask(taskId)),
+    );
+  }
+
   subscribe(listener: StoreListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

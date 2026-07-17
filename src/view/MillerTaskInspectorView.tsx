@@ -6,6 +6,7 @@ import { MILLER_TASK_INSPECTOR_VIEW_TYPE } from "../constants";
 import { TaskStore } from "../domain/TaskStore";
 import { TaskDraftBuffer } from "../state/TaskDraftBuffer";
 import { TaskSelection } from "../state/TaskSelection";
+import { TaskAttachmentActions } from "../ui/attachmentActions";
 import { TaskInspectorApp } from "../ui/TaskInspectorApp";
 
 export class MillerTaskInspectorView extends ItemView {
@@ -16,6 +17,7 @@ export class MillerTaskInspectorView extends ItemView {
     private readonly taskStore: TaskStore,
     private readonly taskSelection: TaskSelection,
     private readonly taskDrafts: TaskDraftBuffer,
+    private readonly attachmentActions: TaskAttachmentActions,
   ) {
     super(leaf);
   }
@@ -42,6 +44,7 @@ export class MillerTaskInspectorView extends ItemView {
           store={this.taskStore}
           selection={this.taskSelection}
           drafts={this.taskDrafts}
+          attachmentActions={this.attachmentActions}
         />
       </StrictMode>,
     );

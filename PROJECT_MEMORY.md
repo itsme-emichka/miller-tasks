@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 5 of 7 complete.
+- Checkpoint: 6 of 7 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 6, image attachment file handling.
+- Next work: checkpoint 7, beta polish, documentation, artifacts, and full QA.
 
 The plugin loads validated schema-v1 task data before registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
@@ -32,6 +32,8 @@ Miller columns.
 MillerTasksPlugin
 ├── TaskPersistence
 │   └── validated load + serialized snapshot writes
+├── TaskAttachmentService
+│   └── vault copies, resource URLs, opening, and trash
 ├── TaskStore
 │   └── task graph, invariants, CRUD, subscriptions
 ├── TaskSelection
@@ -54,6 +56,8 @@ MillerTasksPlugin
 - `src/domain/pluginData.ts` validates stored data and normalizes user input.
 - `src/data/TaskPersistence.ts` serializes immutable snapshots through
   `Plugin.loadData()` and `Plugin.saveData()`.
+- `src/data/TaskAttachmentService.ts` is the only boundary for image files in
+  the Obsidian vault.
 - `src/state/TaskSelection.ts` synchronizes the main browser and inspector
   without a global React tree.
 - `src/state/TaskDraftBuffer.ts` merges text edits per task, saves after 400
@@ -130,6 +134,13 @@ stored.
 - Preserve `schemaVersion` for future migrations.
 - Task timestamps are epoch milliseconds.
 - Due date and time remain local strings and are never timezone-converted.
+- Images are copied to
+  `Miller Tasks/Attachments/<task-id>/<attachment-id>-<safe-name>`.
+- The attachment record is added only after `Vault.createBinary()` succeeds.
+- Removal trashes the vault file before removing its task record. A trash
+  failure leaves the record unchanged.
+- Confirmed subtree deletion trashes all recorded images before deleting task
+  records; a trash error aborts the task deletion.
 
 ## Visual direction
 
@@ -186,7 +197,8 @@ At the end of every checkpoint:
   main view remains free of toolbar controls.
 - Deletion is exposed as the `Delete selected task` command to keep destructive
   controls out of the minimal column surface.
-- Attachment file handling does not exist yet.
+- Empty attachment folders are currently retained after their last file moves
+  to trash; they are harmless and keep filesystem logic conservative.
 - The development vault is local and ignored by Git.
 
 ## Checkpoint 1 verification
@@ -269,14 +281,27 @@ The correction was verified on 2026-07-17:
 - Cancelling parent completion left the parent and all descendants incomplete.
 - Confirmed deletion removed a disposable selected task from persisted data.
 
+## Checkpoint 6 verification
+
+- Twenty-nine tests cover the complete domain, persistence, UI, drop actions,
+  attachment copying/opening/removal, and trash-failure preservation.
+- `npm run check` passed with lint, all tests, TypeScript, and production
+  bundle green.
+- Two SVG images dropped together into the inspector were copied to the
+  selected task folder, recorded in JSON, and rendered as compact previews.
+- Confirmed image removal removed its record and moved its vault file to trash.
+- A disposable task with an image was deleted only after confirmation; both
+  its task record and attachment path disappeared.
+- The attachment grid stayed inside the native 300-pixel right sidebar and
+  retained the primary Obsidian background.
+
 ## Next exact task
 
-Implement checkpoint 6:
+Implement checkpoint 7:
 
-1. Store pasted and dropped images under
-   `Miller Tasks/Attachments/<task-id>/`.
-2. Add multiple compact previews to the native inspector.
-3. Open an attachment through Obsidian when its preview is activated.
-4. Confirm attachment removal and move its vault file to trash.
-5. Trash owned images before confirmed subtree deletion.
-6. Verify, document, commit, push, then continue automatically.
+1. Finish arrow-key navigation, focus behavior, and automatic column scrolling.
+2. Verify reduced motion and both light and dark Obsidian themes.
+3. Complete installation, usage, data, and development documentation.
+4. Run the full automated suite and all mandatory manual vault scenarios.
+5. Confirm beta artifacts `main.js`, `manifest.json`, and `styles.css`.
+6. Commit, push, verify GitHub CI, and hand off the first beta prototype.

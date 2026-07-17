@@ -4,10 +4,12 @@ import {
   MILLER_TASK_INSPECTOR_VIEW_TYPE,
   MILLER_TASKS_VIEW_TYPE,
 } from "./constants";
+import { TaskAttachmentService } from "./data/TaskAttachmentService";
 import { TaskPersistence } from "./data/TaskPersistence";
 import { TaskStore } from "./domain/TaskStore";
 import { TaskDraftBuffer } from "./state/TaskDraftBuffer";
 import { TaskSelection } from "./state/TaskSelection";
+import { TaskAttachment } from "./domain/task";
 import { requestConfirmation } from "./view/ConfirmationModal";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
 import { MillerTasksView } from "./view/MillerTasksView";
@@ -15,6 +17,7 @@ import { MillerTasksView } from "./view/MillerTasksView";
 export default class MillerTasksPlugin extends Plugin {
   private taskStore: TaskStore | null = null;
   private taskDrafts: TaskDraftBuffer | null = null;
+  private attachmentService: TaskAttachmentService | null = null;
   private readonly taskSelection = new TaskSelection();
 
   override async onload(): Promise<void> {
@@ -37,7 +40,12 @@ export default class MillerTasksPlugin extends Plugin {
 
     const taskStore = this.taskStore;
     const taskDrafts = new TaskDraftBuffer(taskStore);
+    const attachmentService = new TaskAttachmentService(
+      this.app,
+      taskStore,
+    );
     this.taskDrafts = taskDrafts;
+    this.attachmentService = attachmentService;
     this.register(
       taskStore.subscribeToPersistenceErrors(() => {
         new Notice("Miller tasks could not save the latest changes.");
@@ -71,6 +79,28 @@ export default class MillerTasksPlugin extends Plugin {
           taskStore,
           this.taskSelection,
           taskDrafts,
+          {
+            addFiles: async (taskId, files) => {
+              taskDrafts.flush(taskId);
+              const result = await attachmentService.addFiles(
+                taskId,
+                files,
+              );
+              if (result.errors.length > 0) {
+                new Notice(
+                  `${result.errors.length} image` +
+                    `${result.errors.length === 1 ? "" : "s"} could not be added.`,
+                );
+                throw new Error("Some images could not be added.");
+              }
+            },
+            getResourceUrl: (attachment) =>
+              attachmentService.getResourceUrl(attachment),
+            openAttachment: (attachment) =>
+              attachmentService.openAttachment(attachment),
+            removeAttachment: (taskId, attachment) =>
+              this.removeAttachment(taskId, attachment),
+          },
         ),
     );
 
@@ -175,8 +205,41 @@ export default class MillerTasksPlugin extends Plugin {
     }
 
     this.taskDrafts?.flushAll();
+    try {
+      await this.attachmentService?.trashTaskAttachments(
+        taskStore.getSubtree(task.id),
+      );
+    } catch {
+      new Notice(
+        "The task was not deleted because its images could not be moved to trash.",
+      );
+      return;
+    }
     taskStore.deleteSubtree(task.id);
     this.taskSelection.setSelectedTaskId(null);
+  }
+
+  private async removeAttachment(
+    taskId: string,
+    attachment: TaskAttachment,
+  ): Promise<void> {
+    const attachmentService = this.attachmentService;
+    if (!attachmentService) {
+      return;
+    }
+
+    this.taskDrafts?.flush(taskId);
+    const confirmed = await requestConfirmation(this.app, {
+      title: "Remove image?",
+      message: `"${attachment.name}" will be moved to Obsidian's trash.`,
+      confirmLabel: "Remove",
+    });
+    if (confirmed) {
+      await attachmentService.removeAttachment(
+        taskId,
+        attachment.id,
+      );
+    }
   }
 
   private async activateView(): Promise<void> {

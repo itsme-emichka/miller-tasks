@@ -3,7 +3,11 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { JSX } from "react";
+import type {
+  ClipboardEvent,
+  DragEvent,
+  JSX,
+} from "react";
 
 import { isTaskOverdue } from "../domain/due";
 import { TaskStore } from "../domain/TaskStore";
@@ -14,11 +18,13 @@ import {
 } from "../domain/task";
 import { TaskDraftBuffer } from "../state/TaskDraftBuffer";
 import { TaskSelection } from "../state/TaskSelection";
+import { TaskAttachmentActions } from "./attachmentActions";
 
 interface TaskInspectorAppProps {
   store: TaskStore;
   selection: TaskSelection;
   drafts: TaskDraftBuffer;
+  attachmentActions?: TaskAttachmentActions;
 }
 
 interface TextDraft {
@@ -31,6 +37,7 @@ export function TaskInspectorApp({
   store,
   selection,
   drafts,
+  attachmentActions,
 }: TaskInspectorAppProps): JSX.Element {
   const snapshot = useTaskSnapshot(store);
   const selectedTaskId = useSelectedTaskId(selection);
@@ -41,10 +48,15 @@ export function TaskInspectorApp({
     createTextDraft(task),
   );
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(
+    null,
+  );
+  const [addingAttachments, setAddingAttachments] = useState(false);
 
   useEffect(() => {
     setTextDraft(createTextDraft(task));
     setUrlError(null);
+    setAttachmentError(null);
   }, [task?.id, task?.updatedAt]);
 
   if (!task) {
@@ -82,10 +94,51 @@ export function TaskInspectorApp({
     store.updateTask(task.id, update);
   };
 
+  const addFiles = (files: readonly File[]): void => {
+    const images = files.filter((file) => file.type.startsWith("image/"));
+    if (!attachmentActions || images.length === 0) {
+      return;
+    }
+
+    setAddingAttachments(true);
+    setAttachmentError(null);
+    void attachmentActions
+      .addFiles(task.id, images)
+      .catch(() => {
+        setAttachmentError("Some images could not be added.");
+      })
+      .finally(() => setAddingAttachments(false));
+  };
+
+  const handlePaste = (event: ClipboardEvent<HTMLFormElement>): void => {
+    const files = Array.from(event.clipboardData.files);
+    if (files.some((file) => file.type.startsWith("image/"))) {
+      event.preventDefault();
+      addFiles(files);
+    }
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>): void => {
+    if (
+      Array.from(event.dataTransfer.items).some(
+        (item) => item.kind === "file",
+      )
+    ) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    addFiles(Array.from(event.dataTransfer.files));
+  };
+
   return (
     <form
       className="miller-task-inspector-form"
       onSubmit={(event) => event.preventDefault()}
+      onPaste={handlePaste}
     >
       <p
         className="miller-task-inspector-title"
@@ -193,6 +246,81 @@ export function TaskInspectorApp({
         <p id="miller-task-url-error" className="miller-task-field-error">
           {urlError}
         </p>
+      ) : null}
+
+      {attachmentActions ? (
+        <div className="miller-task-attachments">
+          <span>Images</span>
+          <div
+            className="miller-task-attachment-grid"
+            aria-label="Image attachments"
+            aria-busy={addingAttachments}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {task.attachments.map((attachment) => {
+              const resourceUrl =
+                attachmentActions.getResourceUrl(attachment);
+              return (
+                <div
+                  className="miller-task-attachment"
+                  key={attachment.id}
+                >
+                  <button
+                    type="button"
+                    className="miller-task-attachment-open"
+                    aria-label={`Open ${attachment.name}`}
+                    onClick={() => {
+                      setAttachmentError(null);
+                      void attachmentActions
+                        .openAttachment(attachment)
+                        .catch(() =>
+                          setAttachmentError(
+                            "The image could not be opened.",
+                          ),
+                        );
+                    }}
+                  >
+                    {resourceUrl ? (
+                      <img
+                        src={resourceUrl}
+                        alt={attachment.name}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span>Missing image</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="miller-task-attachment-remove"
+                    aria-label={`Remove ${attachment.name}`}
+                    onClick={() => {
+                      setAttachmentError(null);
+                      void attachmentActions
+                        .removeAttachment(task.id, attachment)
+                        .catch(() =>
+                          setAttachmentError(
+                            "The image could not be removed.",
+                          ),
+                        );
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+            {task.attachments.length === 0 ? (
+              <p>Paste or drop images</p>
+            ) : null}
+          </div>
+          {attachmentError ? (
+            <p className="miller-task-field-error">
+              {attachmentError}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </form>
   );

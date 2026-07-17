@@ -3,6 +3,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -10,9 +11,12 @@ import { createDefaultPluginData } from "../domain/pluginData";
 import { TaskStore } from "../domain/TaskStore";
 import { TaskDraftBuffer } from "../state/TaskDraftBuffer";
 import { TaskSelection } from "../state/TaskSelection";
+import { TaskAttachmentActions } from "./attachmentActions";
 import { TaskInspectorApp } from "./TaskInspectorApp";
 
-function renderInspector(): {
+function renderInspector(
+  attachmentActions?: TaskAttachmentActions,
+): {
   store: TaskStore;
   selection: TaskSelection;
   drafts: TaskDraftBuffer;
@@ -35,6 +39,7 @@ function renderInspector(): {
       store={store}
       selection={selection}
       drafts={drafts}
+      attachmentActions={attachmentActions}
     />,
   );
   return { store, selection, drafts, taskId: task.id };
@@ -116,5 +121,54 @@ describe("TaskInspectorApp", () => {
 
     act(() => selection.setSelectedTaskId(null));
     expect(screen.getByText("Select a task.")).toBeVisible();
+  });
+
+  it("pastes, opens, and removes image attachments", async () => {
+    const addFiles = vi.fn(async () => undefined);
+    const openAttachment = vi.fn(async () => undefined);
+    const removeAttachment = vi.fn(async () => undefined);
+    const actions: TaskAttachmentActions = {
+      addFiles,
+      getResourceUrl: () => "app://vault/image.png",
+      openAttachment,
+      removeAttachment,
+    };
+    const { store, taskId } = renderInspector(actions);
+    const attachment = {
+      id: "image-1",
+      path: "Miller Tasks/Attachments/task-1/image.png",
+      name: "image.png",
+      mimeType: "image/png",
+      createdAt: 1,
+    };
+    act(() => {
+      store.addAttachment(taskId, attachment);
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open image.png" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove image.png" }),
+    );
+    expect(openAttachment).toHaveBeenCalledWith(attachment);
+    expect(removeAttachment).toHaveBeenCalledWith(taskId, attachment);
+
+    const pasted = new File(["image"], "pasted.png", {
+      type: "image/png",
+    });
+    fireEvent.paste(
+      screen
+        .getByRole("button", { name: "Open image.png" })
+        .closest("form")!,
+      {
+        clipboardData: {
+          files: [pasted],
+        },
+      },
+    );
+    await waitFor(() =>
+      expect(addFiles).toHaveBeenCalledWith(taskId, [pasted]),
+    );
   });
 });
