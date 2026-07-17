@@ -14,6 +14,7 @@ theme.
 ## Features
 
 - Navigate and reorganize a task tree up to 10 levels deep.
+- Render every task as a plain Obsidian checkbox-and-text line.
 - Create tasks and subtasks directly at the end of each visible column.
 - Rename inline, complete tasks, and hide completed work by default.
 - Keep description, tags, local due date/time, priority, flag, and an absolute

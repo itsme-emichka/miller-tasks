@@ -22,12 +22,16 @@ automatically while all checks are green.
       confirmed trash behavior.
 - [x] 7. Polish both Obsidian themes, keyboard and focus behavior, finish
       documentation, run full QA, and prepare beta artifacts.
+- [x] 7a. Replace task title buttons with native-looking checkbox-and-text
+      rows while preserving selection, keyboard, and drag behavior.
 
 ## Product constraints
 
 - One task tree, with root tasks at depth 1 and a maximum depth of 10.
 - Desktop-only, English UI, one shared heading, unlabelled columns, a uniform
   Obsidian background, and no decorative interface elements.
+- Every task is a plain Obsidian checkbox followed by text, never a visually
+  styled button or card.
 - The task inspector is a separate ItemView in Obsidian's collapsible right
   sidebar and never consumes space inside the column browser.
 - JSON persistence through the Obsidian plugin data API.

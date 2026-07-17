@@ -149,6 +149,8 @@ stored.
 The UI is intentionally reduced to the hierarchy itself:
 
 - One `Miller Tasks` heading spans the entire main view.
+- Task rows use Obsidian's `task-list-item-checkbox` followed by a plain text
+  `span`; task titles are never rendered as visual buttons or cards.
 - Columns have no visible headings, level labels, counters, path rail, status,
   badges, instructional empty states, or embedded inspector.
 - Every surface uses `--background-primary`; columns differ only through a
@@ -330,8 +332,18 @@ The correction was verified on 2026-07-17:
 - Drag-and-drop actions: `0f59942`
 - Image attachments: `00923d0`
 - Beta polish: `f6f41de`
-- GitHub Actions Node 24 runtime update: the commit containing this
-  documentation
+- GitHub Actions Node 24 runtime update: `c1876a9`
+- Native checkbox-and-text task rows: the commit containing this documentation
+
+## Native task-row correction verification
+
+- Task titles render as `SPAN` elements and retain button semantics only for
+  keyboard accessibility.
+- Checkboxes use Obsidian's native `task-list-item-checkbox` class.
+- Computed task-row bottom border is `0px`; unselected text has `0px` border
+  and no box shadow.
+- Selection is represented only by the existing two-pixel Finder accent.
+- `npm run check` remains green with 30 tests after the structural change.
 
 ## Resume point
 

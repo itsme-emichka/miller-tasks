@@ -27,9 +27,9 @@ function createThroughInput(label: string, title: string): void {
 
 describe("MillerTasksApp", () => {
   it("keeps one shared heading and no visible column headings", () => {
-    const { container } = render(
-      <MillerTasksApp store={createStore()} />,
-    );
+    const store = createStore();
+    store.createTask({ title: "Plain task" });
+    const { container } = render(<MillerTasksApp store={store} />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Miller Tasks" }),
@@ -38,6 +38,13 @@ describe("MillerTasksApp", () => {
     expect(container.querySelector(".miller-tasks-toolbar")).toBeNull();
     expect(container.querySelector(".miller-tasks-path")).toBeNull();
     expect(container.querySelector(".miller-tasks-inspector")).toBeNull();
+    const title = screen.getByRole("button", { name: "Plain task" });
+    expect(title.tagName).toBe("SPAN");
+    expect(
+      title
+        .closest(".miller-task-row")
+        ?.querySelector(".task-list-item-checkbox"),
+    ).toBeInstanceOf(HTMLInputElement);
   });
 
   it("creates a task, selects it, and opens its child column", () => {

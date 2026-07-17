@@ -443,7 +443,7 @@ function TaskRow({
   };
 
   const handleTaskKeyDown = (
-    event: KeyboardEvent<HTMLButtonElement>,
+    event: KeyboardEvent<HTMLSpanElement>,
   ): void => {
     if (isDragging) {
       listeners?.onKeyDown?.(event);
@@ -489,7 +489,7 @@ function TaskRow({
       }}
     >
       <input
-        className="miller-task-checkbox"
+        className="task-list-item-checkbox miller-task-checkbox"
         type="checkbox"
         checked={task.completed}
         aria-label={`${task.completed ? "Reopen" : "Complete"} ${task.title}`}
@@ -508,9 +508,8 @@ function TaskRow({
           onKeyDown={handleTitleKeyDown}
         />
       ) : (
-        <button
+        <span
           className="miller-task-title"
-          type="button"
           onClick={onSelect}
           onDoubleClick={onBeginEditing}
           {...attributes}
@@ -518,7 +517,7 @@ function TaskRow({
           onKeyDown={handleTaskKeyDown}
         >
           {task.title}
-        </button>
+        </span>
       )}
     </div>
   );
