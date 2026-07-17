@@ -9,6 +9,7 @@ import type {
   SyntheticEvent,
 } from "react";
 
+import { isTaskOverdue } from "../domain/due";
 import { TaskStore } from "../domain/TaskStore";
 import { MAX_TASK_DEPTH, PluginData, TaskRecord } from "../domain/task";
 
@@ -38,6 +39,10 @@ export function MillerTasksApp({
       validateSelectedPath(currentPath, snapshot),
     );
   }, [snapshot]);
+
+  useEffect(() => {
+    onTaskSelected?.(selectedPath.at(-1) ?? null);
+  }, [onTaskSelected, selectedPath]);
 
   const columns = useMemo(
     () => buildColumns(selectedPath),
@@ -198,6 +203,7 @@ function TaskRow({
       className="miller-task-row"
       data-selected={selected}
       data-completed={task.completed}
+      data-overdue={isTaskOverdue(task)}
     >
       <input
         className="miller-task-checkbox"

@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 3 of 7 complete.
+- Checkpoint: 4 of 7 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 4, native right-sidebar task details and overdue state.
+- Next work: checkpoint 5, drag-and-drop moves and destructive confirmations.
 
 The plugin loads validated schema-v1 task data before registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
@@ -34,13 +34,18 @@ MillerTasksPlugin
 │   └── validated load + serialized snapshot writes
 ├── TaskStore
 │   └── task graph, invariants, CRUD, subscriptions
+├── TaskSelection
+│   └── shared selected-task state
+├── TaskDraftBuffer
+│   └── 400 ms text debounce + synchronous flush
 ├── MillerTasksView (main Obsidian ItemView)
 │   └── React root
 │       └── MillerTasksApp
 │           ├── one shared heading
 │           └── horizontally scrolling unlabelled columns
-└── MillerTaskInspectorView
-    └── native Obsidian right-sidebar leaf
+└── MillerTaskInspectorView (native right-sidebar ItemView)
+    └── React root
+        └── TaskInspectorApp
 ```
 
 - `src/main.ts` owns the Obsidian lifecycle, view registration, ribbon icon,
@@ -49,11 +54,18 @@ MillerTasksPlugin
 - `src/domain/pluginData.ts` validates stored data and normalizes user input.
 - `src/data/TaskPersistence.ts` serializes immutable snapshots through
   `Plugin.loadData()` and `Plugin.saveData()`.
+- `src/state/TaskSelection.ts` synchronizes the main browser and inspector
+  without a global React tree.
+- `src/state/TaskDraftBuffer.ts` merges text edits per task, saves after 400
+  ms, and flushes before selection changes, blur, view close, and unload.
 - `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
 - `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
   selected ancestry path, and renders root and selected-child columns.
+- `src/ui/TaskInspectorApp.tsx` renders task metadata inside the native
+  right sidebar. Date, time, priority, and flag save immediately.
+- `src/domain/due.ts` computes overdue state from local date/time strings.
 - `styles.css` uses Obsidian theme variables. It does not impose a standalone
   light or dark palette.
 - `scripts/setup-dev-vault.mjs` copies production artifacts into an ignored
@@ -166,7 +178,7 @@ At the end of every checkpoint:
   required cascade confirmation.
 - Completed-task visibility is controlled through the command palette so the
   main view remains free of toolbar controls.
-- No inspector form, drag-and-drop UI, or attachment file handling exists yet.
+- No drag-and-drop UI or attachment file handling exists yet.
 - The development vault is local and ignored by Git.
 
 ## Checkpoint 1 verification
@@ -221,15 +233,27 @@ The correction was verified on 2026-07-17:
 - The inspected view retained one heading, no column headers, and a uniform
   `--background-primary` surface.
 
+## Checkpoint 4 verification
+
+- Twenty-two tests cover domain logic, persistence, navigation, inspector
+  editing, URL validation, metadata, overdue state, debounce, and flush.
+- `npm run check` passed with lint, all tests, TypeScript, and production
+  bundle green.
+- Obsidian 1.12.7 opened the selected task in a 300-pixel native right sidebar.
+- Description, normalized tags, due date/time, high priority, flag, and an
+  absolute HTTPS URL persisted to `data.json`.
+- A task due on the previous local date rendered its title and date with
+  Obsidian's `--text-error` color (`rgb(233, 49, 71)` in the tested theme).
+- The inspector remained outside the main Miller columns view and used the
+  same primary background.
+
 ## Next exact task
 
-Implement checkpoint 4:
+Implement checkpoint 5:
 
-1. Share selected-task state between the main view and a native right-sidebar
-   inspector ItemView.
-2. Add description, tags, local due date/time, priority, flag, and URL fields.
-3. Debounce text saves by 400 ms and flush them on blur, task changes, and
-   plugin unload.
-4. Validate URLs and show errors without adding global interface chrome.
-5. Compute and render incomplete overdue tasks in red.
+1. Add sortable rows and droppable columns with `@dnd-kit`.
+2. Reorder siblings and move tasks between parents while preserving selection.
+3. Surface depth and cycle rejections through an Obsidian notice.
+4. Confirm parent completion before completing descendants.
+5. Confirm deletion before removing a task subtree.
 6. Verify, document, commit, push, then continue automatically.

@@ -6,11 +6,15 @@ import {
 } from "./constants";
 import { TaskPersistence } from "./data/TaskPersistence";
 import { TaskStore } from "./domain/TaskStore";
+import { TaskDraftBuffer } from "./state/TaskDraftBuffer";
+import { TaskSelection } from "./state/TaskSelection";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
 import { MillerTasksView } from "./view/MillerTasksView";
 
 export default class MillerTasksPlugin extends Plugin {
   private taskStore: TaskStore | null = null;
+  private taskDrafts: TaskDraftBuffer | null = null;
+  private readonly taskSelection = new TaskSelection();
 
   override async onload(): Promise<void> {
     const persistence = new TaskPersistence(
@@ -31,6 +35,8 @@ export default class MillerTasksPlugin extends Plugin {
     }
 
     const taskStore = this.taskStore;
+    const taskDrafts = new TaskDraftBuffer(taskStore);
+    this.taskDrafts = taskDrafts;
     this.register(
       taskStore.subscribeToPersistenceErrors(() => {
         new Notice("Miller tasks could not save the latest changes.");
@@ -39,11 +45,20 @@ export default class MillerTasksPlugin extends Plugin {
 
     this.registerView(
       MILLER_TASKS_VIEW_TYPE,
-      (leaf) => new MillerTasksView(leaf, taskStore),
+      (leaf) =>
+        new MillerTasksView(leaf, taskStore, (taskId) => {
+          this.selectTask(taskId);
+        }),
     );
     this.registerView(
       MILLER_TASK_INSPECTOR_VIEW_TYPE,
-      (leaf) => new MillerTaskInspectorView(leaf),
+      (leaf) =>
+        new MillerTaskInspectorView(
+          leaf,
+          taskStore,
+          this.taskSelection,
+          taskDrafts,
+        ),
     );
 
     this.addRibbonIcon("list-tree", "Open miller tasks", () => {
@@ -77,7 +92,16 @@ export default class MillerTasksPlugin extends Plugin {
   }
 
   override onunload(): void {
+    this.taskDrafts?.flushAll();
     void this.taskStore?.flush().catch(() => undefined);
+  }
+
+  private selectTask(taskId: string | null): void {
+    this.taskDrafts?.flushAll();
+    this.taskSelection.setSelectedTaskId(taskId);
+    if (taskId !== null) {
+      void this.activateInspector();
+    }
   }
 
   private async activateView(): Promise<void> {

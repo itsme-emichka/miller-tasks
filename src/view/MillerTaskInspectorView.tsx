@@ -2,51 +2,55 @@ import { ItemView, WorkspaceLeaf } from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 
-import { MILLER_TASKS_VIEW_TYPE } from "../constants";
+import { MILLER_TASK_INSPECTOR_VIEW_TYPE } from "../constants";
 import { TaskStore } from "../domain/TaskStore";
-import { MillerTasksApp } from "../ui/MillerTasksApp";
+import { TaskDraftBuffer } from "../state/TaskDraftBuffer";
+import { TaskSelection } from "../state/TaskSelection";
+import { TaskInspectorApp } from "../ui/TaskInspectorApp";
 
-export class MillerTasksView extends ItemView {
+export class MillerTaskInspectorView extends ItemView {
   private reactRoot: Root | null = null;
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly taskStore: TaskStore,
-    private readonly onTaskSelected: (taskId: string | null) => void,
+    private readonly taskSelection: TaskSelection,
+    private readonly taskDrafts: TaskDraftBuffer,
   ) {
     super(leaf);
   }
 
   override getViewType(): string {
-    return MILLER_TASKS_VIEW_TYPE;
+    return MILLER_TASK_INSPECTOR_VIEW_TYPE;
   }
 
   override getDisplayText(): string {
-    return "Miller tasks";
+    return "Task details";
   }
 
   override getIcon(): string {
-    return "list-tree";
+    return "panel-right";
   }
 
   override async onOpen(): Promise<void> {
     this.contentEl.empty();
-    this.contentEl.addClass("miller-tasks-view");
-
+    this.contentEl.addClass("miller-task-inspector-view");
     this.reactRoot = createRoot(this.contentEl);
     this.reactRoot.render(
       <StrictMode>
-        <MillerTasksApp
+        <TaskInspectorApp
           store={this.taskStore}
-          onTaskSelected={this.onTaskSelected}
+          selection={this.taskSelection}
+          drafts={this.taskDrafts}
         />
       </StrictMode>,
     );
   }
 
   override async onClose(): Promise<void> {
+    this.taskDrafts.flushAll();
     this.reactRoot?.unmount();
     this.reactRoot = null;
-    this.contentEl.removeClass("miller-tasks-view");
+    this.contentEl.removeClass("miller-task-inspector-view");
   }
 }

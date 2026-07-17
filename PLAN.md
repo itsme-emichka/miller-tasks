@@ -14,7 +14,7 @@ automatically while all checks are green.
       invariants, completion/deletion cascades, and unit tests.
 - [x] 3. Build Miller column navigation, task creation, inline rename,
       completion controls, and completed-task visibility.
-- [ ] 4. Add task details to the native right-sidebar inspector, metadata
+- [x] 4. Add task details to the native right-sidebar inspector, metadata
       fields, autosave, validation, and overdue state.
 - [ ] 5. Add ordering, cross-column drag-and-drop, tree moves, and destructive
       action confirmations.
@@ -38,6 +38,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 3 is complete. The next work is checkpoint 4: the native
-right-sidebar inspector, task metadata, autosave, validation, and overdue
-state.
+Checkpoint 4 is complete. The next work is checkpoint 5: drag-and-drop tree
+moves, manual ordering, and confirmations for destructive tree actions.
