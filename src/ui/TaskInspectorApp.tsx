@@ -19,12 +19,15 @@ import {
 import { TaskDraftBuffer } from "../state/TaskDraftBuffer";
 import { TaskSelection } from "../state/TaskSelection";
 import { TaskAttachmentActions } from "./attachmentActions";
+import { DailyTasksEditor } from "./DailyTasksEditor";
+import { DailyTemplateActions } from "./dailyTemplateActions";
 
 interface TaskInspectorAppProps {
   store: TaskStore;
   selection: TaskSelection;
   drafts: TaskDraftBuffer;
   attachmentActions?: TaskAttachmentActions;
+  dailyTemplateActions?: DailyTemplateActions;
 }
 
 interface TextDraft {
@@ -38,6 +41,7 @@ export function TaskInspectorApp({
   selection,
   drafts,
   attachmentActions,
+  dailyTemplateActions,
 }: TaskInspectorAppProps): JSX.Element {
   const snapshot = useTaskSnapshot(store);
   const selectedTaskId = useSelectedTaskId(selection);
@@ -60,7 +64,16 @@ export function TaskInspectorApp({
   }, [task?.id, task?.updatedAt]);
 
   if (!task) {
-    return <p className="miller-task-inspector-empty">Select a task.</p>;
+    return (
+      <div className="miller-task-inspector-stack">
+        <p className="miller-task-inspector-empty">Select a task.</p>
+        <DailyTasksEditor
+          store={store}
+          templates={snapshot.dailyTemplates}
+          actions={dailyTemplateActions}
+        />
+      </div>
+    );
   }
 
   const updateTextDraft = (
@@ -135,11 +148,12 @@ export function TaskInspectorApp({
   };
 
   return (
-    <form
-      className="miller-task-inspector-form"
-      onSubmit={(event) => event.preventDefault()}
-      onPaste={handlePaste}
-    >
+    <div className="miller-task-inspector-stack">
+      <form
+        className="miller-task-inspector-form"
+        onSubmit={(event) => event.preventDefault()}
+        onPaste={handlePaste}
+      >
       <p
         className="miller-task-inspector-title"
         data-overdue={isTaskOverdue(task)}
@@ -248,7 +262,7 @@ export function TaskInspectorApp({
         </p>
       ) : null}
 
-      {attachmentActions ? (
+      {attachmentActions && task.dailyTemplateId === null ? (
         <div className="miller-task-attachments">
           <span>Images</span>
           <div
@@ -322,7 +336,13 @@ export function TaskInspectorApp({
           ) : null}
         </div>
       ) : null}
-    </form>
+      </form>
+      <DailyTasksEditor
+        store={store}
+        templates={snapshot.dailyTemplates}
+        actions={dailyTemplateActions}
+      />
+    </div>
   );
 }
 

@@ -101,6 +101,10 @@ export default class MillerTasksPlugin extends Plugin {
             removeAttachment: (taskId, attachment) =>
               this.removeAttachment(taskId, attachment),
           },
+          {
+            deleteTemplate: (templateId, title) =>
+              this.deleteDailyTemplate(templateId, title),
+          },
         ),
     );
 
@@ -239,6 +243,37 @@ export default class MillerTasksPlugin extends Plugin {
         taskId,
         attachment.id,
       );
+    }
+  }
+
+  private async deleteDailyTemplate(
+    templateId: string,
+    title: string,
+  ): Promise<void> {
+    const taskStore = this.taskStore;
+    if (!taskStore) {
+      return;
+    }
+
+    const confirmed = await requestConfirmation(this.app, {
+      title: "Delete daily task?",
+      message:
+        `"${title}" will stop appearing each day. ` +
+        "Today's instance will also be deleted.",
+      confirmLabel: "Delete",
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.taskDrafts?.flushAll();
+    const selectedTaskId = this.taskSelection.getSelectedTaskId();
+    const selectedTask = selectedTaskId
+      ? taskStore.getTask(selectedTaskId)
+      : undefined;
+    taskStore.deleteDailyTemplate(templateId);
+    if (selectedTask?.dailyTemplateId === templateId) {
+      this.taskSelection.setSelectedTaskId(null);
     }
   }
 

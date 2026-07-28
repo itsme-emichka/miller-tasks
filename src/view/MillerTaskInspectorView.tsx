@@ -7,6 +7,7 @@ import { TaskStore } from "../domain/TaskStore";
 import { TaskDraftBuffer } from "../state/TaskDraftBuffer";
 import { TaskSelection } from "../state/TaskSelection";
 import { TaskAttachmentActions } from "../ui/attachmentActions";
+import { DailyTemplateActions } from "../ui/dailyTemplateActions";
 import { TaskInspectorApp } from "../ui/TaskInspectorApp";
 
 export class MillerTaskInspectorView extends ItemView {
@@ -18,6 +19,7 @@ export class MillerTaskInspectorView extends ItemView {
     private readonly taskSelection: TaskSelection,
     private readonly taskDrafts: TaskDraftBuffer,
     private readonly attachmentActions: TaskAttachmentActions,
+    private readonly dailyTemplateActions: DailyTemplateActions,
   ) {
     super(leaf);
   }
@@ -45,6 +47,7 @@ export class MillerTaskInspectorView extends ItemView {
           selection={this.taskSelection}
           drafts={this.taskDrafts}
           attachmentActions={this.attachmentActions}
+          dailyTemplateActions={this.dailyTemplateActions}
         />
       </StrictMode>,
     );

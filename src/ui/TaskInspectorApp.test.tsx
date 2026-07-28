@@ -12,21 +12,24 @@ import { TaskStore } from "../domain/TaskStore";
 import { TaskDraftBuffer } from "../state/TaskDraftBuffer";
 import { TaskSelection } from "../state/TaskSelection";
 import { TaskAttachmentActions } from "./attachmentActions";
+import { DailyTemplateActions } from "./dailyTemplateActions";
 import { TaskInspectorApp } from "./TaskInspectorApp";
 
 function renderInspector(
   attachmentActions?: TaskAttachmentActions,
+  dailyTemplateActions?: DailyTemplateActions,
 ): {
   store: TaskStore;
   selection: TaskSelection;
   drafts: TaskDraftBuffer;
   taskId: string;
 } {
+  let id = 0;
   const store = new TaskStore(
     createDefaultPluginData(),
     undefined,
     {
-      idFactory: () => "task-1",
+      idFactory: () => `task-${++id}`,
       now: () => new Date(2026, 6, 17, 15).getTime(),
     },
   );
@@ -40,6 +43,7 @@ function renderInspector(
       selection={selection}
       drafts={drafts}
       attachmentActions={attachmentActions}
+      dailyTemplateActions={dailyTemplateActions}
     />,
   );
   return { store, selection, drafts, taskId: task.id };
@@ -121,6 +125,56 @@ describe("TaskInspectorApp", () => {
 
     act(() => selection.setSelectedTaskId(null));
     expect(screen.getByText("Select a task.")).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Daily tasks" }),
+    ).toBeVisible();
+  });
+
+  it("creates, renames, and delegates deletion of daily tasks", async () => {
+    let storeReference: TaskStore;
+    const deleteTemplate = vi.fn(async (templateId: string) => {
+      storeReference.deleteDailyTemplate(templateId);
+    });
+    const { store } = renderInspector(undefined, {
+      deleteTemplate,
+    });
+    storeReference = store;
+    const newDailyTask = screen.getByRole("textbox", {
+      name: "New daily task",
+    });
+
+    fireEvent.change(newDailyTask, {
+      target: { value: "Morning review" },
+    });
+    fireEvent.submit(newDailyTask.closest("form")!);
+
+    const template = store.getDailyTemplates()[0]!;
+    expect(template.title).toBe("Morning review");
+    expect(store.getTodayTasks()[0]?.dailyTemplateId).toBe(template.id);
+
+    const templateTitle = screen.getByRole("textbox", {
+      name: "Daily task Morning review",
+    });
+    fireEvent.change(templateTitle, {
+      target: { value: "Daily planning" },
+    });
+    fireEvent.blur(templateTitle);
+    expect(store.getDailyTemplates()[0]?.title).toBe("Daily planning");
+    expect(store.getTodayTasks()[0]?.title).toBe("Daily planning");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Delete daily task Daily planning",
+      }),
+    );
+    await waitFor(() =>
+      expect(deleteTemplate).toHaveBeenCalledWith(
+        template.id,
+        "Daily planning",
+      ),
+    );
+    expect(store.getDailyTemplates()).toHaveLength(0);
+    expect(store.getTodayTasks()).toHaveLength(0);
   });
 
   it("pastes, opens, and removes image attachments", async () => {

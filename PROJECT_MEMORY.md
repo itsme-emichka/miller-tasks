@@ -376,11 +376,10 @@ The correction was verified on 2026-07-17:
 
 ## Resume point
 
-Continue checkpoint 9 without changing the accepted timing semantics:
+Finish checkpoint 9 without changing the accepted timing semantics:
 
-1. Manage daily templates in the native inspector.
-2. Run rollover on load and at a short registered interval.
-3. Verify, document, commit, push, and wait for green CI.
+1. Run rollover on load and at a short registered interval.
+2. Verify, document, commit, push, and wait for green CI.
 
 ## Checkpoint 8 verification
 
@@ -406,5 +405,20 @@ Continue checkpoint 9 without changing the accepted timing semantics:
   globally hidden.
 - Thirty-six tests pass, including pinned-layout, direct-add, shared
   completion, and manual-scroll regression coverage.
+- `npm run check` passed with lint, all tests, TypeScript, and production
+  bundle green.
+
+## Checkpoint 9b verification
+
+- Daily templates are created, renamed, and deleted from the native
+  right-sidebar inspector, including when no tree task is selected.
+- Creating a template immediately creates today's incomplete instance and
+  projects it into Today.
+- Renaming a template updates today's instance; deleting it removes both the
+  template and its current instance after native confirmation.
+- Daily instances do not expose image controls because they are discarded and
+  recreated at local midnight.
+- Thirty-seven tests pass, including daily-template creation, rename
+  synchronization, delegated deletion, and empty-selection access.
 - `npm run check` passed with lint, all tests, TypeScript, and production
   bundle green.

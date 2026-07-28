@@ -30,8 +30,9 @@ automatically while all checks are green.
       daily templates, and local-day instance rollover.
 - [x] 9a. Add the pinned Today projection and inline calendar icon without
       moving the manually controlled Miller viewport.
-- [ ] 9b. Add daily-template inspector controls, scheduler, full QA, and
-      documentation.
+- [x] 9b. Add minimal daily-template controls to the native right-sidebar
+      inspector.
+- [ ] 9c. Add the rollover scheduler, run full QA, and finish documentation.
 
 ## Product constraints
 
@@ -52,5 +53,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 9a is complete. The next work is checkpoint 9b: daily-template
-controls, scheduler, and full integration QA.
+Checkpoint 9b is complete. The next work is checkpoint 9c: the rollover
+scheduler, full integration QA, and final documentation.
