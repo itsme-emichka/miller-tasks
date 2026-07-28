@@ -32,7 +32,7 @@ automatically while all checks are green.
       moving the manually controlled Miller viewport.
 - [x] 9b. Add minimal daily-template controls to the native right-sidebar
       inspector.
-- [ ] 9c. Add the rollover scheduler, run full QA, and finish documentation.
+- [x] 9c. Add the rollover scheduler, run full QA, and finish documentation.
 
 ## Product constraints
 
@@ -53,5 +53,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 9b is complete. The next work is checkpoint 9c: the rollover
-scheduler, full integration QA, and final documentation.
+All planned checkpoints are complete. The current source build is the first
+prototype with Today projection and daily-task rollover.

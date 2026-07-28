@@ -12,15 +12,16 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 8 of 9 complete.
+- Checkpoint: 9 of 9 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 9, pinned Today UI and daily-template integration.
+- Next work: user testing and issue-driven refinement.
 
-The plugin loads validated schema-v1 task data before registering views.
+The plugin loads and migrates validated schema-v1 or schema-v2 task data before
+registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
 deletion cascades, metadata normalization, subscriptions, and queued saves.
 The main React view now renders the live task tree as horizontally scrolling
@@ -40,14 +41,18 @@ MillerTasksPlugin
 │   └── shared selected-task state
 ├── TaskDraftBuffer
 │   └── 400 ms text debounce + synchronous flush
+├── one-minute local rollover
+│   └── Today retention + daily-instance replacement
 ├── MillerTasksView (main Obsidian ItemView)
 │   └── React root
 │       └── MillerTasksApp
 │           ├── one shared heading
-│           └── horizontally scrolling unlabelled columns
+│           ├── pinned Today projection
+│           └── horizontally scrolling unlabelled tree columns
 └── MillerTaskInspectorView (native right-sidebar ItemView)
     └── React root
         └── TaskInspectorApp
+            └── DailyTasksEditor
 ```
 
 - `src/main.ts` owns the Obsidian lifecycle, view registration, ribbon icon,
@@ -62,18 +67,22 @@ MillerTasksPlugin
   without a global React tree.
 - `src/state/TaskDraftBuffer.ts` merges text edits per task, saves after 400
   ms, and flushes before selection changes, blur, view close, and unload.
+- `src/state/runTaskRollover.ts` applies deterministic rollover and clears a
+  selected daily instance when that instance is replaced.
 - `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
 - `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
-  selected ancestry path, renders root and selected-child columns, and hosts
-  the shared `@dnd-kit` context. It also owns Finder-style arrow navigation,
-  and focus restoration without moving the horizontal viewport.
+  selected ancestry path, renders pinned Today plus root and selected-child
+  columns, and hosts the shared `@dnd-kit` context for the tree. It also owns
+  Finder-style arrow navigation and focus restoration without moving the
+  horizontal viewport.
 - `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
 - `src/view/ConfirmationModal.ts` provides native Obsidian confirmations for
   parent completion and subtree deletion.
-- `src/ui/TaskInspectorApp.tsx` renders task metadata inside the native
-  right sidebar. Date, time, priority, and flag save immediately.
+- `src/ui/TaskInspectorApp.tsx` renders task metadata and daily-template
+  controls inside the native right sidebar. Date, time, priority, and flag
+  save immediately.
 - `src/domain/due.ts` computes overdue state from local date/time strings.
 - `styles.css` uses Obsidian theme variables. It does not impose a standalone
   light or dark palette.
@@ -181,12 +190,11 @@ The UI is intentionally reduced to the hierarchy itself:
 The layout is:
 
 ```text
-┌───────────────────────────────────────────────┐ ┌───────────┐
-│ Miller Tasks                                  │ │ Obsidian  │
-├───────────────┬───────────────┬───────────────┤ │ right     │
-│               │               │               │ │ sidebar   │
-│   column      │   column      │      …        │ │ inspector │
-└───────────────┴───────────────┴───────────────┘ └───────────┘
+┌───────────────────────────────────────────────────────────────┐ ┌───────────┐
+│ Miller Tasks                                                  │ │ Obsidian  │
+├───────────────┬───────────────────────────────────────────────┤ │ right     │
+│ pinned Today  │ manually scrolling hierarchy columns →       │ │ sidebar   │
+└───────────────┴───────────────────────────────────────────────┘ └───────────┘
 ```
 
 ## Development commands
@@ -352,7 +360,12 @@ The correction was verified on 2026-07-17:
 - Beta polish: `f6f41de`
 - GitHub Actions Node 24 runtime update: `c1876a9`
 - Native checkbox-and-text task rows: `b6d7263`
-- Manual-only Miller viewport: the commit containing this documentation
+- Manual-only Miller viewport: `0b22a6d`
+- Today and daily task model: `ac0d03e`
+- Pinned Today projection: `f72783d`
+- Daily-template inspector controls: `2890120`
+- Rollover scheduler and final documentation: the commit containing this
+  documentation
 
 ## Manual viewport correction
 
@@ -376,10 +389,9 @@ The correction was verified on 2026-07-17:
 
 ## Resume point
 
-Finish checkpoint 9 without changing the accepted timing semantics:
-
-1. Run rollover on load and at a short registered interval.
-2. Verify, document, commit, push, and wait for green CI.
+The first prototype is complete. Resume from user-reported behavior or visual
+refinement requests. Preserve the accepted timing semantics and manual-only
+horizontal viewport.
 
 ## Checkpoint 8 verification
 
@@ -422,3 +434,18 @@ Finish checkpoint 9 without changing the accepted timing semantics:
   synchronization, delegated deletion, and empty-selection access.
 - `npm run check` passed with lint, all tests, TypeScript, and production
   bundle green.
+
+## Checkpoint 9c verification
+
+- Rollover runs once during plugin startup and every 60 seconds while Obsidian
+  remains open.
+- A selected daily instance is cleared safely when midnight rollover replaces
+  it, so the inspector never keeps a stale selection.
+- The generic delete-selected command delegates a daily instance to confirmed
+  template deletion instead of allowing it to reappear one minute later.
+- Thirty-eight tests pass across ten test files.
+- `npm run check`, `git diff --check`, and the production dev-vault build pass.
+- The updated build was installed into the isolated dev-vault. A new
+  automated Obsidian screenshot was not captured because the running Obsidian
+  instance did not expose its local debugging port and macOS denied assistive
+  access; layout and no-autoscroll behavior remain covered by React tests.

@@ -4,9 +4,9 @@ Miller Tasks is a desktop task tracker for Obsidian. It turns one recursive
 task tree into horizontally scrolling Miller columns and keeps task details in
 Obsidian's native, collapsible right sidebar.
 
-The design is deliberately minimal: one shared heading, unlabelled columns,
-the current Finder-style path, and the same background as the active Obsidian
-theme.
+The design is deliberately minimal: one shared heading, an always-pinned Today
+column, unlabelled hierarchy columns, and the same background as the active
+Obsidian theme.
 
 > Beta status: the first complete prototype is ready for testing. The data
 > format is versioned, but compatibility is not guaranteed before 1.0.
@@ -15,6 +15,10 @@ theme.
 
 - Navigate and reorganize a task tree up to 10 levels deep.
 - Render every task as a plain Obsidian checkbox-and-text line.
+- Add any tree task to the pinned Today column from its row calendar icon.
+- Keep unfinished Today tasks across days and completed ones for 24 hours.
+- Define daily tasks that receive one fresh incomplete instance each local
+  day.
 - Create tasks and subtasks directly at the end of each visible column.
 - Rename inline, complete tasks, and hide completed work by default.
 - Keep description, tags, local due date/time, priority, flag, and an absolute
@@ -61,19 +65,27 @@ plugins**.
 - Type into **New task** and press Enter. Selecting the new row opens its
   subtask column.
 - Click a row to select it. Double-click it, or press F2, to rename it.
+- Click the calendar-plus icon at the end of a tree row to add or remove that
+  task from Today. The pinned copy is the same task, so its checkbox and
+  metadata stay synchronized.
 - Use Arrow Up/Down, Home, and End to move between siblings. Arrow Right enters
   the next column; Arrow Left returns to the parent.
 - Drag within a column to reorder. Drop onto a row in another column to make a
   task its child; drop near an edge to insert beside it.
 - Edit metadata in the right sidebar. Text saves after 400 ms and immediately
   on blur or task change.
+- Create and rename daily tasks in the **Daily tasks** section of the right
+  sidebar. Deleting a daily task asks for confirmation.
 - Paste images while the inspector is active, or drop them on the Images area.
 - Run **Miller Tasks: Toggle completed tasks** to show or hide completed work.
 - Run **Miller Tasks: Delete selected task** to delete the selected subtree
   after confirmation.
 
 Completing a parent completes its full subtree after confirmation. Reopening a
-completed parent reopens only that parent.
+completed parent reopens only that parent. A completed ordinary Today task
+remains struck through for 24 hours. At local midnight, every daily-task
+instance is removed and replaced with a new incomplete instance; an unfinished
+ordinary Today task carries forward.
 
 ## Data and files
 
@@ -94,12 +106,15 @@ Obsidian's configured trash behavior. If a file cannot be moved to trash, its
 record is retained and task deletion is aborted.
 
 Due dates and times are local strings. The plugin does not convert time zones.
+Today and daily rollover also use the computer's local calendar date. The
+rollover runs on plugin load and once per minute while Obsidian is open.
 
 ## Scope
 
-The beta intentionally excludes recurrence, reminders, notifications, time
-zones, smart lists, multiple lists, search, arbitrary custom properties, and
-mobile UI.
+The beta intentionally excludes general recurrence rules, reminders,
+notifications, time zones, smart lists, multiple lists, search, arbitrary
+custom properties, and mobile UI. Daily tasks are the only automatic
+re-creation rule.
 
 ## Develop
 

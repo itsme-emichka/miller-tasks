@@ -9,6 +9,10 @@ import { TaskPersistence } from "./data/TaskPersistence";
 import { TaskStore } from "./domain/TaskStore";
 import { TaskDraftBuffer } from "./state/TaskDraftBuffer";
 import { TaskSelection } from "./state/TaskSelection";
+import {
+  runTaskRollover,
+  TASK_ROLLOVER_INTERVAL_MS,
+} from "./state/runTaskRollover";
 import { TaskAttachment } from "./domain/task";
 import { requestConfirmation } from "./view/ConfirmationModal";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
@@ -50,6 +54,16 @@ export default class MillerTasksPlugin extends Plugin {
       taskStore.subscribeToPersistenceErrors(() => {
         new Notice("Miller tasks could not save the latest changes.");
       }),
+    );
+    const runRollover = (): void => {
+      runTaskRollover(taskStore, this.taskSelection);
+    };
+    runRollover();
+    this.registerInterval(
+      window.setInterval(
+        runRollover,
+        TASK_ROLLOVER_INTERVAL_MS,
+      ),
     );
 
     this.registerView(
@@ -192,6 +206,13 @@ export default class MillerTasksPlugin extends Plugin {
     const task = taskId ? taskStore?.getTask(taskId) : undefined;
     if (!taskStore || !task) {
       new Notice("Select a task to delete.");
+      return;
+    }
+    if (task.dailyTemplateId !== null) {
+      await this.deleteDailyTemplate(
+        task.dailyTemplateId,
+        task.title,
+      );
       return;
     }
 
