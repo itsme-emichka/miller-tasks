@@ -149,13 +149,16 @@
 .miller-task-row[data-selected="true"] .miller-task-title {
   color: var(--interactive-accent);
   box-shadow: none;
+}
+
+.miller-task-row[data-active="true"] .miller-task-title {
   text-decoration-line: underline;
   text-decoration-color: var(--interactive-accent);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
 }
 
-.miller-task-row[data-selected="true"][data-completed="true"]
+.miller-task-row[data-active="true"][data-completed="true"]
   .miller-task-title {
   text-decoration-line: underline line-through;
 }

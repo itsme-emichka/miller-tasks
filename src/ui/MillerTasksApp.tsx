@@ -293,6 +293,7 @@ export function MillerTasksApp({
                 column={column}
                 tasks={getChildren(snapshot, column.parentId, now)}
                 columnIndex={columnIndex}
+                activeTaskId={selectedPath.at(-1) ?? null}
                 editingTaskId={editingTaskId}
                 onBeginEditing={setEditingTaskId}
                 onFinishEditing={() => setEditingTaskId(null)}
@@ -375,6 +376,7 @@ interface TaskColumnProps {
   column: ColumnState;
   tasks: TaskRecord[];
   columnIndex: number;
+  activeTaskId: string | null;
   editingTaskId: string | null;
   onBeginEditing: (taskId: string) => void;
   onFinishEditing: () => void;
@@ -401,6 +403,7 @@ function TaskColumn({
   column,
   tasks,
   columnIndex,
+  activeTaskId,
   editingTaskId,
   onBeginEditing,
   onFinishEditing,
@@ -439,6 +442,7 @@ function TaskColumn({
               task={task}
               taskIndex={taskIndex}
               selected={column.selectedId === task.id}
+              active={activeTaskId === task.id}
               editing={editingTaskId === task.id}
               onBeginEditing={() => onBeginEditing(task.id)}
               onFinishEditing={onFinishEditing}
@@ -475,6 +479,7 @@ interface TaskRowProps {
   task: TaskRecord;
   taskIndex: number;
   selected: boolean;
+  active: boolean;
   editing: boolean;
   onBeginEditing: () => void;
   onFinishEditing: () => void;
@@ -491,6 +496,7 @@ function TaskRow({
   task,
   taskIndex,
   selected,
+  active,
   editing,
   onBeginEditing,
   onFinishEditing,
@@ -587,6 +593,7 @@ function TaskRow({
       ref={setNodeRef}
       className="miller-task-row"
       data-selected={selected}
+      data-active={active}
       data-completed={task.completed}
       data-overdue={isTaskOverdue(task)}
       data-dragging={isDragging}

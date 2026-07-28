@@ -311,6 +311,34 @@ describe("MillerTasksApp", () => {
     );
   });
 
+  it("marks only the deepest selected path item as active", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Path parent" });
+    store.createTask({
+      parentId: parent.id,
+      title: "Current child",
+    });
+    render(<MillerTasksApp store={store} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Path parent" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Current child" }),
+    );
+
+    const parentRow = screen
+      .getByRole("button", { name: "Path parent" })
+      .closest(".miller-task-row");
+    const childRow = screen
+      .getByRole("button", { name: "Current child" })
+      .closest(".miller-task-row");
+    expect(parentRow).toHaveAttribute("data-selected", "true");
+    expect(parentRow).toHaveAttribute("data-active", "false");
+    expect(childRow).toHaveAttribute("data-selected", "true");
+    expect(childRow).toHaveAttribute("data-active", "true");
+  });
+
   it("delegates completion when confirmation behavior is provided", () => {
     const store = createStore();
     store.createTask({ title: "Parent" });

@@ -44,6 +44,8 @@ automatically while all checks are green.
       when the task owns a subtree.
 - [x] 10f. Replace the selected-path side stripe with accent-colored,
       underlined task text.
+- [x] 10g. Underline only the current task while keeping its selected
+      ancestors accent-colored without underlines.
 
 ## Product constraints
 
@@ -65,5 +67,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All requested checkpoint-10 interaction and selection-style changes are
+All requested checkpoint-10 interaction and active-path styling changes are
 complete.

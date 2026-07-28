@@ -383,8 +383,8 @@ The correction was verified on 2026-07-17:
 - Checkboxes use Obsidian's native `task-list-item-checkbox` class.
 - Computed task-row bottom border is `0px`; unselected text has `0px` border
   and no box shadow.
-- Selection is represented by underlined task text in Obsidian's interactive
-  accent color, without a side stripe.
+- The selected ancestry path uses Obsidian's interactive accent color. Only
+  the current deepest task is underlined; ancestors have color alone.
 - `npm run check` remains green with 31 tests after the viewport regression
   coverage.
 
@@ -514,3 +514,13 @@ horizontal viewport.
   underline.
 - Overdue and completed colors apply normally until the row becomes selected;
   selection then takes visual precedence as the user requested.
+
+## Checkpoint 10g verification
+
+- Every node in the open ancestry path remains accent-colored so hierarchy is
+  readable across columns.
+- Only `selectedPath.at(-1)` receives `data-active="true"` and the selection
+  underline.
+- Moving deeper transfers the underline to the child and leaves every ancestor
+  color-only; moving back transfers it to the new current node.
+- Completed current tasks retain line-through plus underline.
