@@ -330,6 +330,61 @@ describe("MillerTasksApp", () => {
     expect(store.getTask("task-1")?.completed).toBe(false);
   });
 
+  it("deletes the focused row with Delete or Backspace", () => {
+    const store = createStore();
+    store.createTask({ title: "Delete me" });
+    store.createTask({ title: "Backspace me" });
+    const deleteTask = vi.fn();
+    render(
+      <MillerTasksApp
+        store={store}
+        onTaskDelete={deleteTask}
+      />,
+    );
+
+    const first = screen.getByRole("button", { name: "Delete me" });
+    fireEvent.click(first);
+    expect(first).toHaveFocus();
+    fireEvent.keyDown(first, { key: "Delete" });
+
+    const second = screen.getByRole("button", {
+      name: "Backspace me",
+    });
+    fireEvent.click(second);
+    fireEvent.keyDown(second, { key: "Backspace" });
+
+    expect(deleteTask).toHaveBeenNthCalledWith(1, "task-1");
+    expect(deleteTask).toHaveBeenNthCalledWith(2, "task-2");
+  });
+
+  it("does not delete while a title or new-task field is edited", () => {
+    const store = createStore();
+    store.createTask({ title: "Keep editing" });
+    const deleteTask = vi.fn();
+    render(
+      <MillerTasksApp
+        store={store}
+        onTaskDelete={deleteTask}
+      />,
+    );
+
+    fireEvent.doubleClick(
+      screen.getByRole("button", { name: "Keep editing" }),
+    );
+    fireEvent.keyDown(
+      screen.getByRole("textbox", {
+        name: "Rename Keep editing",
+      }),
+      { key: "Backspace" },
+    );
+    fireEvent.keyDown(
+      screen.getByRole("textbox", { name: "New root task" }),
+      { key: "Delete" },
+    );
+
+    expect(deleteTask).not.toHaveBeenCalled();
+  });
+
   it("navigates rows and columns from the keyboard", () => {
     const store = createStore();
     const parent = store.createTask({ title: "Parent" });

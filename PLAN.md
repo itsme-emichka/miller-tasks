@@ -40,6 +40,8 @@ automatically while all checks are green.
 - [x] 10c. Keep newly completed tree rows visible until the next local day.
 - [x] 10d. Expose confirmed subtree deletion directly in the native task
       inspector.
+- [x] 10e. Delete a focused task row with Delete or Backspace, confirming only
+      when the task owns a subtree.
 
 ## Product constraints
 
@@ -61,5 +63,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All requested checkpoint-10 changes, including visible task deletion, are
+All requested checkpoint-10 changes, including keyboard deletion, are
 complete.

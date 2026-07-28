@@ -47,6 +47,7 @@ interface MillerTasksAppProps {
   store: TaskStore;
   onTaskSelected?: (taskId: string | null) => void;
   onTaskCompletion?: (taskId: string, completed: boolean) => void;
+  onTaskDelete?: (taskId: string) => void;
   onTaskMoveError?: (message: string) => void;
   clock?: () => number;
 }
@@ -74,6 +75,7 @@ export function MillerTasksApp({
   store,
   onTaskSelected,
   onTaskCompletion,
+  onTaskDelete,
   onTaskMoveError,
   clock = Date.now,
 }: MillerTasksAppProps): JSX.Element {
@@ -266,6 +268,7 @@ export function MillerTasksApp({
                   task={task}
                   onSelect={() => onTaskSelected?.(task.id)}
                   onTaskCompletion={completeTask}
+                  onDelete={() => onTaskDelete?.(task.id)}
                 />
               </Fragment>
             ))}
@@ -297,6 +300,7 @@ export function MillerTasksApp({
                 onCreateTask={createTask}
                 onKeyboardNavigate={handleKeyboardNavigation}
                 onTaskCompletion={completeTask}
+                onTaskDelete={onTaskDelete}
                 onToggleToday={(taskId, today) =>
                   store.setTaskToday(taskId, today)
                 }
@@ -314,12 +318,14 @@ interface TodayTaskRowProps {
   task: TaskRecord;
   onSelect: () => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  onDelete: () => void;
 }
 
 function TodayTaskRow({
   task,
   onSelect,
   onTaskCompletion,
+  onDelete,
 }: TodayTaskRowProps): JSX.Element {
   const handleTitleKeyDown = (
     event: KeyboardEvent<HTMLSpanElement>,
@@ -327,6 +333,9 @@ function TodayTaskRow({
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       onSelect();
+    } else if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      onDelete();
     }
   };
 
@@ -350,7 +359,10 @@ function TodayTaskRow({
         className="miller-task-title"
         role="button"
         tabIndex={0}
-        onClick={onSelect}
+        onClick={(event) => {
+          event.currentTarget.focus({ preventScroll: true });
+          onSelect();
+        }}
         onKeyDown={handleTitleKeyDown}
       >
         {task.title}
@@ -373,6 +385,7 @@ interface TaskColumnProps {
     columnIndex: number,
   ) => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  onTaskDelete?: (taskId: string) => void;
   onToggleToday: (taskId: string, today: boolean) => void;
   onKeyboardNavigate: (
     direction: KeyboardNavigation,
@@ -394,6 +407,7 @@ function TaskColumn({
   onSelectTask,
   onCreateTask,
   onTaskCompletion,
+  onTaskDelete,
   onToggleToday,
   onKeyboardNavigate,
   store,
@@ -430,6 +444,7 @@ function TaskColumn({
               onFinishEditing={onFinishEditing}
               onSelect={() => onSelectTask(task.id, columnIndex)}
               onTaskCompletion={onTaskCompletion}
+              onDelete={() => onTaskDelete?.(task.id)}
               todaySelected={store.isTaskScheduledForToday(task.id)}
               onToggleToday={onToggleToday}
               onKeyboardNavigate={(direction) =>
@@ -465,6 +480,7 @@ interface TaskRowProps {
   onFinishEditing: () => void;
   onSelect: () => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  onDelete: () => void;
   todaySelected: boolean;
   onToggleToday: (taskId: string, today: boolean) => void;
   onKeyboardNavigate: (direction: KeyboardNavigation) => void;
@@ -480,6 +496,7 @@ function TaskRow({
   onFinishEditing,
   onSelect,
   onTaskCompletion,
+  onDelete,
   todaySelected,
   onToggleToday,
   onKeyboardNavigate,
@@ -557,6 +574,11 @@ function TaskRow({
       onBeginEditing();
       return;
     }
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      onDelete();
+      return;
+    }
     listeners?.onKeyDown?.(event);
   };
 
@@ -596,7 +618,10 @@ function TaskRow({
       ) : (
         <span
           className="miller-task-title"
-          onClick={onSelect}
+          onClick={(event) => {
+            event.currentTarget.focus({ preventScroll: true });
+            onSelect();
+          }}
           onDoubleClick={onBeginEditing}
           {...attributes}
           {...listeners}

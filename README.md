@@ -66,6 +66,8 @@ plugins**.
 - Type into **New task** and press Enter. Selecting the new row opens its
   subtask column.
 - Click a row to select it. Double-click it, or press F2, to rename it.
+- Press Delete or Backspace on a selected row to remove it immediately when
+  it has no subtasks. A task with subtasks asks before deleting the subtree.
 - Click the calendar-plus icon at the end of a tree row to add or remove that
   task from Today. The pinned copy is the same task, so its checkbox and
   metadata stay synchronized.
@@ -81,8 +83,8 @@ plugins**.
 - Run **Miller Tasks: Toggle completed tasks** to show or hide completed work.
 - Run **Miller Tasks: Delete selected task** to delete the selected subtree
   after confirmation.
-- Use **Delete task** in the right-sidebar inspector for the same confirmed
-  subtree deletion without opening the command palette.
+- Use **Delete task** in the right-sidebar inspector for the same behavior
+  without returning focus to the task row.
 
 Completing a parent completes its full subtree after confirmation. Reopening a
 completed parent reopens only that parent. A completed ordinary Today task

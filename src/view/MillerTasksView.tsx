@@ -8,6 +8,7 @@ import { MillerTasksApp } from "../ui/MillerTasksApp";
 
 interface MillerTasksActions {
   completeTask: (taskId: string, completed: boolean) => void;
+  deleteTask: (taskId: string) => void;
   reportMoveError: (message: string) => void;
 }
 
@@ -46,6 +47,7 @@ export class MillerTasksView extends ItemView {
           store={this.taskStore}
           onTaskSelected={this.onTaskSelected}
           onTaskCompletion={this.actions.completeTask}
+          onTaskDelete={this.actions.deleteTask}
           onTaskMoveError={this.actions.reportMoveError}
         />
       </StrictMode>,

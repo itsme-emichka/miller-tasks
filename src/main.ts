@@ -79,6 +79,9 @@ export default class MillerTasksPlugin extends Plugin {
             completeTask: (taskId, completed) => {
               void this.completeTask(taskId, completed);
             },
+            deleteTask: (taskId) => {
+              void this.deleteTask(taskId);
+            },
             reportMoveError: (message) => {
               new Notice(message);
             },
@@ -222,21 +225,23 @@ export default class MillerTasksPlugin extends Plugin {
       await this.deleteDailyTemplate(
         task.dailyTemplateId,
         task.title,
+        false,
       );
       return;
     }
 
     const subtreeSize = taskStore.getSubtreeSize(task.id);
-    const confirmed = await requestConfirmation(this.app, {
-      title: "Delete task?",
-      message:
-        subtreeSize === 1
-          ? `"${task.title}" will be deleted.`
-          : `"${task.title}" and ${subtreeSize - 1} subtasks will be deleted.`,
-      confirmLabel: "Delete",
-    });
-    if (!confirmed) {
-      return;
+    if (subtreeSize > 1) {
+      const confirmed = await requestConfirmation(this.app, {
+        title: "Delete task and subtasks?",
+        message:
+          `"${task.title}" and ${subtreeSize - 1} subtasks ` +
+          "will be deleted.",
+        confirmLabel: "Delete all",
+      });
+      if (!confirmed) {
+        return;
+      }
     }
 
     this.taskDrafts?.flushAll();
@@ -287,21 +292,24 @@ export default class MillerTasksPlugin extends Plugin {
   private async deleteDailyTemplate(
     templateId: string,
     title: string,
+    requiresConfirmation = true,
   ): Promise<void> {
     const taskStore = this.taskStore;
     if (!taskStore) {
       return;
     }
 
-    const confirmed = await requestConfirmation(this.app, {
-      title: "Delete daily task?",
-      message:
-        `"${title}" will stop appearing each day. ` +
-        "Today's instance will also be deleted.",
-      confirmLabel: "Delete",
-    });
-    if (!confirmed) {
-      return;
+    if (requiresConfirmation) {
+      const confirmed = await requestConfirmation(this.app, {
+        title: "Delete daily task?",
+        message:
+          `"${title}" will stop appearing each day. ` +
+          "Today's instance will also be deleted.",
+        confirmLabel: "Delete",
+      });
+      if (!confirmed) {
+        return;
+      }
     }
 
     this.taskDrafts?.flushAll();

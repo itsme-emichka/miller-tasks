@@ -492,3 +492,14 @@ horizontal viewport.
   behavior before task records are removed; a trash failure aborts deletion.
 - Deleting a daily instance delegates to confirmed daily-template deletion.
 - The existing command-palette deletion action uses the same implementation.
+
+## Checkpoint 10e verification
+
+- Clicking a task title focuses it with `preventScroll`, preserving the
+  manually controlled horizontal viewport.
+- Delete and Backspace remove the focused selected row from both the tree and
+  Today.
+- Leaf tasks delete immediately. Branch tasks show native confirmation with
+  the exact subtask count before the full subtree is removed.
+- Inline rename, new-task fields, inspector fields, and other text inputs keep
+  normal Delete and Backspace behavior.
