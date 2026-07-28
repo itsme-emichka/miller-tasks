@@ -14,10 +14,12 @@ import { TaskSelection } from "../state/TaskSelection";
 import { TaskAttachmentActions } from "./attachmentActions";
 import { DailyTemplateActions } from "./dailyTemplateActions";
 import { TaskInspectorApp } from "./TaskInspectorApp";
+import { TaskActions } from "./taskActions";
 
 function renderInspector(
   attachmentActions?: TaskAttachmentActions,
   dailyTemplateActions?: DailyTemplateActions,
+  taskActions?: TaskActions,
 ): {
   store: TaskStore;
   selection: TaskSelection;
@@ -44,6 +46,7 @@ function renderInspector(
       drafts={drafts}
       attachmentActions={attachmentActions}
       dailyTemplateActions={dailyTemplateActions}
+      taskActions={taskActions}
     />,
   );
   return { store, selection, drafts, taskId: task.id };
@@ -175,6 +178,21 @@ describe("TaskInspectorApp", () => {
     );
     expect(store.getDailyTemplates()).toHaveLength(0);
     expect(store.getTodayTasks()).toHaveLength(0);
+  });
+
+  it("delegates deletion of the selected task from the inspector", () => {
+    const deleteTask = vi.fn(async () => undefined);
+    const { taskId } = renderInspector(
+      undefined,
+      undefined,
+      { deleteTask },
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete task" }),
+    );
+
+    expect(deleteTask).toHaveBeenCalledWith(taskId);
   });
 
   it("pastes, opens, and removes image attachments", async () => {

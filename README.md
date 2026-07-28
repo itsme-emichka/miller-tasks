@@ -81,6 +81,8 @@ plugins**.
 - Run **Miller Tasks: Toggle completed tasks** to show or hide completed work.
 - Run **Miller Tasks: Delete selected task** to delete the selected subtree
   after confirmation.
+- Use **Delete task** in the right-sidebar inspector for the same confirmed
+  subtree deletion without opening the command palette.
 
 Completing a parent completes its full subtree after confirmation. Reopening a
 completed parent reopens only that parent. A completed ordinary Today task

@@ -481,3 +481,14 @@ horizontal viewport.
   without requiring a task mutation or moving the horizontal viewport.
 - Today remains independent: an ordinary Today task still uses its exact
   24-hour completed retention.
+
+## Checkpoint 10d verification
+
+- The native right-sidebar inspector exposes a minimal red-text `Delete task`
+  action for the selected task.
+- Deletion still requires native confirmation and removes the complete
+  subtree through `TaskStore.deleteSubtree`.
+- All recorded images in the subtree move through Obsidian's configured trash
+  behavior before task records are removed; a trash failure aborts deletion.
+- Deleting a daily instance delegates to confirmed daily-template deletion.
+- The existing command-palette deletion action uses the same implementation.

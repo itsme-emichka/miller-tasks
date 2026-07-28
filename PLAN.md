@@ -38,6 +38,8 @@ automatically while all checks are green.
 - [x] 10b. Project leaf descendants into Today and derive parent completion
       from completed children.
 - [x] 10c. Keep newly completed tree rows visible until the next local day.
+- [x] 10d. Expose confirmed subtree deletion directly in the native task
+      inspector.
 
 ## Product constraints
 
@@ -59,4 +61,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All requested checkpoint-10 changes are complete.
+All requested checkpoint-10 changes, including visible task deletion, are
+complete.

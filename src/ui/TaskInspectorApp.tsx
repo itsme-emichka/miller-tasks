@@ -21,6 +21,7 @@ import { TaskSelection } from "../state/TaskSelection";
 import { TaskAttachmentActions } from "./attachmentActions";
 import { DailyTasksEditor } from "./DailyTasksEditor";
 import { DailyTemplateActions } from "./dailyTemplateActions";
+import { TaskActions } from "./taskActions";
 
 interface TaskInspectorAppProps {
   store: TaskStore;
@@ -28,6 +29,7 @@ interface TaskInspectorAppProps {
   drafts: TaskDraftBuffer;
   attachmentActions?: TaskAttachmentActions;
   dailyTemplateActions?: DailyTemplateActions;
+  taskActions?: TaskActions;
 }
 
 interface TextDraft {
@@ -42,6 +44,7 @@ export function TaskInspectorApp({
   drafts,
   attachmentActions,
   dailyTemplateActions,
+  taskActions,
 }: TaskInspectorAppProps): JSX.Element {
   const snapshot = useTaskSnapshot(store);
   const selectedTaskId = useSelectedTaskId(selection);
@@ -337,6 +340,15 @@ export function TaskInspectorApp({
         </div>
       ) : null}
       </form>
+      {taskActions ? (
+        <button
+          type="button"
+          className="miller-task-delete"
+          onClick={() => void taskActions.deleteTask(task.id)}
+        >
+          Delete task
+        </button>
+      ) : null}
       <DailyTasksEditor
         store={store}
         templates={snapshot.dailyTemplates}

@@ -119,6 +119,9 @@ export default class MillerTasksPlugin extends Plugin {
             deleteTemplate: (templateId, title) =>
               this.deleteDailyTemplate(templateId, title),
           },
+          {
+            deleteTask: (taskId) => this.deleteTask(taskId),
+          },
         ),
     );
 
@@ -201,11 +204,18 @@ export default class MillerTasksPlugin extends Plugin {
   }
 
   private async deleteSelectedTask(): Promise<void> {
-    const taskStore = this.taskStore;
     const taskId = this.taskSelection.getSelectedTaskId();
-    const task = taskId ? taskStore?.getTask(taskId) : undefined;
-    if (!taskStore || !task) {
+    if (taskId === null) {
       new Notice("Select a task to delete.");
+      return;
+    }
+    await this.deleteTask(taskId);
+  }
+
+  private async deleteTask(taskId: string): Promise<void> {
+    const taskStore = this.taskStore;
+    const task = taskStore?.getTask(taskId);
+    if (!taskStore || !task) {
       return;
     }
     if (task.dailyTemplateId !== null) {
@@ -230,9 +240,10 @@ export default class MillerTasksPlugin extends Plugin {
     }
 
     this.taskDrafts?.flushAll();
+    const subtree = taskStore.getSubtree(task.id);
     try {
       await this.attachmentService?.trashTaskAttachments(
-        taskStore.getSubtree(task.id),
+        subtree,
       );
     } catch {
       new Notice(
@@ -241,7 +252,13 @@ export default class MillerTasksPlugin extends Plugin {
       return;
     }
     taskStore.deleteSubtree(task.id);
-    this.taskSelection.setSelectedTaskId(null);
+    const selectedTaskId = this.taskSelection.getSelectedTaskId();
+    if (
+      selectedTaskId !== null &&
+      subtree.some((candidate) => candidate.id === selectedTaskId)
+    ) {
+      this.taskSelection.setSelectedTaskId(null);
+    }
   }
 
   private async removeAttachment(
