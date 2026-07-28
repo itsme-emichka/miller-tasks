@@ -1,4 +1,5 @@
 import {
+  DailyTaskTemplate,
   PluginData,
   Priority,
   TaskAttachment,
@@ -18,15 +19,16 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export function createDefaultPluginData(): PluginData {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     showCompleted: false,
     tasks: [],
+    dailyTemplates: [],
   };
 }
 
 export function clonePluginData(data: PluginData): PluginData {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     showCompleted: data.showCompleted,
     tasks: data.tasks.map((task) => ({
       ...task,
@@ -34,6 +36,9 @@ export function clonePluginData(data: PluginData): PluginData {
       attachments: task.attachments.map((attachment) => ({
         ...attachment,
       })),
+    })),
+    dailyTemplates: data.dailyTemplates.map((template) => ({
+      ...template,
     })),
   };
 }
@@ -46,25 +51,33 @@ export function parsePluginData(value: unknown): PluginData {
   if (!isRecord(value)) {
     invalid("Stored plugin data must be an object.");
   }
-  if (value.schemaVersion !== 1) {
+  const migrated = migratePluginData(value);
+  if (migrated.schemaVersion !== 2) {
     invalid("Unsupported Miller Tasks data version.");
   }
-  if (typeof value.showCompleted !== "boolean") {
+  if (typeof migrated.showCompleted !== "boolean") {
     invalid("showCompleted must be a boolean.");
   }
-  if (!Array.isArray(value.tasks)) {
+  if (!Array.isArray(migrated.tasks)) {
     invalid("tasks must be an array.");
   }
+  if (!Array.isArray(migrated.dailyTemplates)) {
+    invalid("dailyTemplates must be an array.");
+  }
 
-  const tasks = value.tasks.map((task, index) =>
+  const tasks = migrated.tasks.map((task, index) =>
     parseTask(task, index),
   );
-  validateGraph(tasks);
+  const dailyTemplates = migrated.dailyTemplates.map(
+    (template, index) => parseDailyTemplate(template, index),
+  );
+  validateGraph(tasks, dailyTemplates);
 
   return clonePluginData({
-    schemaVersion: 1,
-    showCompleted: value.showCompleted,
+    schemaVersion: 2,
+    showCompleted: migrated.showCompleted,
     tasks,
+    dailyTemplates,
   });
 }
 
@@ -214,7 +227,8 @@ function parseTask(value: unknown, index: number): TaskRecord {
   }
   if (
     typeof value.completed !== "boolean" ||
-    typeof value.flagged !== "boolean"
+    typeof value.flagged !== "boolean" ||
+    typeof value.today !== "boolean"
   ) {
     invalid(`Task ${index} completion fields are invalid.`);
   }
@@ -266,6 +280,30 @@ function parseTask(value: unknown, index: number): TaskRecord {
   ) {
     invalid(`Task ${index} completion timestamp is inconsistent.`);
   }
+  if (
+    value.todayAddedAt !== null &&
+    !isTimestamp(value.todayAddedAt)
+  ) {
+    invalid(`Task ${index} todayAddedAt is invalid.`);
+  }
+  if (
+    (value.today && value.todayAddedAt === null) ||
+    (!value.today && value.todayAddedAt !== null)
+  ) {
+    invalid(`Task ${index} Today timestamp is inconsistent.`);
+  }
+  if (
+    value.dailyTemplateId !== null &&
+    typeof value.dailyTemplateId !== "string"
+  ) {
+    invalid(`Task ${index} dailyTemplateId is invalid.`);
+  }
+  if (
+    value.generatedForDate !== null &&
+    typeof value.generatedForDate !== "string"
+  ) {
+    invalid(`Task ${index} generatedForDate is invalid.`);
+  }
 
   const dueDate = normalizeDueDate(value.dueDate);
   const dueTime = normalizeDueTime(value.dueTime);
@@ -293,6 +331,17 @@ function parseTask(value: unknown, index: number): TaskRecord {
     updatedAt: Number(value.updatedAt),
     completedAt:
       value.completedAt === null ? null : Number(value.completedAt),
+    today: value.today,
+    todayAddedAt:
+      value.todayAddedAt === null ? null : Number(value.todayAddedAt),
+    dailyTemplateId:
+      value.dailyTemplateId === null
+        ? null
+        : normalizeTitle(value.dailyTemplateId),
+    generatedForDate:
+      value.generatedForDate === null
+        ? null
+        : normalizeDueDate(value.generatedForDate),
   };
 }
 
@@ -320,7 +369,34 @@ function parseAttachment(
   });
 }
 
-function validateGraph(tasks: readonly TaskRecord[]): void {
+function parseDailyTemplate(
+  value: unknown,
+  index: number,
+): DailyTaskTemplate {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.title !== "string" ||
+    !Number.isInteger(value.order) ||
+    Number(value.order) < 0 ||
+    !isTimestamp(value.createdAt) ||
+    !isTimestamp(value.updatedAt)
+  ) {
+    invalid(`Daily template at index ${index} is invalid.`);
+  }
+  return {
+    id: normalizeTitle(value.id),
+    title: normalizeTitle(value.title),
+    order: Number(value.order),
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
+function validateGraph(
+  tasks: readonly TaskRecord[],
+  dailyTemplates: readonly DailyTaskTemplate[],
+): void {
   const byId = new Map<string, TaskRecord>();
   for (const task of tasks) {
     if (byId.has(task.id)) {
@@ -332,12 +408,50 @@ function validateGraph(tasks: readonly TaskRecord[]): void {
     byId.set(task.id, task);
   }
 
+  const templateIds = new Set<string>();
+  dailyTemplates.forEach((template, index) => {
+    if (templateIds.has(template.id)) {
+      invalid(`Duplicate daily template ID: ${template.id}`);
+    }
+    if (template.order !== index) {
+      invalid("Daily template order must be contiguous and unique.");
+    }
+    templateIds.add(template.id);
+  });
+
+  const dailyInstanceKeys = new Set<string>();
   for (const task of tasks) {
+    if (task.dailyTemplateId !== null) {
+      if (
+        !templateIds.has(task.dailyTemplateId) ||
+        task.parentId !== null ||
+        task.generatedForDate === null ||
+        !task.today ||
+        task.attachments.length > 0
+      ) {
+        invalid(`Daily task ${task.id} is inconsistent.`);
+      }
+      const key = `${task.dailyTemplateId}:${task.generatedForDate}`;
+      if (dailyInstanceKeys.has(key)) {
+        invalid(`Duplicate daily task instance: ${key}`);
+      }
+      dailyInstanceKeys.add(key);
+      continue;
+    }
+    if (task.generatedForDate !== null) {
+      invalid(`Tree task ${task.id} has a generated date.`);
+    }
     if (task.parentId !== null && !byId.has(task.parentId)) {
       throw new TaskDomainError(
         "parent-missing",
         `Task ${task.id} has a missing parent.`,
       );
+    }
+    if (
+      task.parentId !== null &&
+      byId.get(task.parentId)?.dailyTemplateId !== null
+    ) {
+      invalid(`Tree task ${task.id} cannot belong to a daily task.`);
     }
 
     const visited = new Set<string>();
@@ -366,7 +480,9 @@ function validateGraph(tasks: readonly TaskRecord[]): void {
   }
 
   const siblingOrders = new Map<string, number[]>();
-  for (const task of tasks) {
+  for (const task of tasks.filter(
+    (candidate) => candidate.dailyTemplateId === null,
+  )) {
     const key = task.parentId ?? "__root__";
     const orders = siblingOrders.get(key) ?? [];
     orders.push(task.order);
@@ -380,6 +496,33 @@ function validateGraph(tasks: readonly TaskRecord[]): void {
       }
     });
   }
+}
+
+function migratePluginData(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  if (value.schemaVersion !== 1) {
+    return value;
+  }
+
+  return {
+    ...value,
+    schemaVersion: 2,
+    dailyTemplates: [],
+    tasks: Array.isArray(value.tasks)
+      ? value.tasks.map((task: unknown) =>
+          isRecord(task)
+            ? {
+                ...task,
+                today: false,
+                todayAddedAt: null,
+                dailyTemplateId: null,
+                generatedForDate: null,
+              }
+            : task,
+        )
+      : value.tasks,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

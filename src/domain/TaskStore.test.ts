@@ -156,6 +156,78 @@ describe("TaskStore", () => {
       "url-invalid",
     );
   });
+
+  it("keeps unfinished Today tasks and clears completed ones after 24 hours", () => {
+    let now = new Date(2026, 6, 18, 10, 0).getTime();
+    let id = 0;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `today-${++id}`,
+        now: () => now,
+      },
+    );
+    const unfinished = store.createTask({ title: "Carry forward" });
+    const completed = store.createTask({ title: "Finish once" });
+    store.setTaskToday(unfinished.id, true);
+    store.setTaskToday(completed.id, true);
+    store.completeSubtree(completed.id, true);
+
+    now += 24 * 60 * 60 * 1_000 - 1;
+    expect(store.getTodayTasks(now).map((task) => task.id)).toEqual([
+      unfinished.id,
+      completed.id,
+    ]);
+
+    now += 1;
+    const result = store.rollover(now);
+    expect(result.clearedToday).toEqual([completed.id]);
+    expect(store.getTodayTasks(now).map((task) => task.id)).toEqual([
+      unfinished.id,
+    ]);
+    expect(store.getTask(completed.id)?.today).toBe(false);
+  });
+
+  it("replaces daily task instances at local midnight", () => {
+    let now = new Date(2026, 6, 18, 10, 0).getTime();
+    let id = 0;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `daily-${++id}`,
+        now: () => now,
+      },
+    );
+    const template = store.createDailyTemplate("Drink water");
+    const first = store.getTodayTasks(now)[0]!;
+    expect(first).toMatchObject({
+      title: "Drink water",
+      dailyTemplateId: template.id,
+      generatedForDate: "2026-07-18",
+    });
+    store.completeSubtree(first.id, true);
+
+    now = new Date(2026, 6, 19, 0, 1).getTime();
+    const result = store.rollover(now);
+    const second = store.getTodayTasks(now)[0]!;
+    expect(result.removed.map((task) => task.id)).toEqual([first.id]);
+    expect(second).toMatchObject({
+      title: "Drink water",
+      completed: false,
+      dailyTemplateId: template.id,
+      generatedForDate: "2026-07-19",
+    });
+    expect(second.id).not.toBe(first.id);
+    expect(store.getTask(first.id)).toBeUndefined();
+
+    store.updateDailyTemplate(template.id, "Hydrate");
+    expect(store.getTask(second.id)?.title).toBe("Hydrate");
+    expect(store.deleteDailyTemplate(template.id)).toHaveLength(1);
+    expect(store.getDailyTemplates()).toHaveLength(0);
+    expect(store.getTodayTasks(now)).toHaveLength(0);
+  });
 });
 
 function expectTaskError(

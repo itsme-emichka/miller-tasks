@@ -12,14 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 7 of 7 complete.
+- Checkpoint: 8 of 9 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: collect beta feedback and triage issues; no planned checkpoint
-  remains.
+- Next work: checkpoint 9, pinned Today UI and daily-template integration.
 
 The plugin loads validated schema-v1 task data before registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
@@ -81,7 +80,7 @@ MillerTasksPlugin
 - `scripts/setup-dev-vault.mjs` copies production artifacts into an ignored
   dedicated development vault.
 
-## Locked domain model
+## Domain model
 
 Checkpoint 2 introduced:
 
@@ -105,12 +104,32 @@ interface TaskRecord {
   createdAt: number;
   updatedAt: number;
   completedAt: number | null;
+  today: boolean;
+  todayAddedAt: number | null;
+  dailyTemplateId: string | null;
+  generatedForDate: string | null;
 }
 ```
 
-Plugin data has `schemaVersion: 1`, `showCompleted: false`, and a flat task
-array. Hierarchy is represented by `parentId`; depth is derived and never
-stored.
+Plugin data uses `schemaVersion: 2`, `showCompleted: false`, a flat task array,
+and ordered `DailyTaskTemplate` records. Schema-v1 data migrates in memory by
+adding inactive Today fields and an empty template list. Hierarchy is
+represented by `parentId`; depth is derived and never stored.
+
+## Today and daily invariants
+
+- A normal tree task has `dailyTemplateId: null` and can be projected into
+  Today without copying it by setting `today` and `todayAddedAt`.
+- An unfinished marked tree task remains in Today across local-day changes.
+- A completed marked tree task remains visible for exactly 24 hours after
+  `completedAt`, then rollover clears its Today marker.
+- A daily template creates exactly one isolated task instance for the current
+  local date.
+- Daily instances never appear in the tree, accept children, move, or own image
+  attachments.
+- At local midnight, every prior daily instance is deleted and a fresh,
+  incomplete instance is generated, regardless of prior completion.
+- Local-day rollover is deterministic and catches up after Obsidian was closed.
 
 ## Tree invariants
 
@@ -357,6 +376,21 @@ The correction was verified on 2026-07-17:
 
 ## Resume point
 
-The planned beta is complete. Start future work from a reported issue or a
-newly approved post-beta scope. Preserve schema version 1 compatibility unless
-a documented migration is added.
+Implement checkpoint 9 without changing the accepted timing semantics:
+
+1. Pin Today outside the manually scrolling Miller viewport.
+2. Add a compact calendar-plus icon directly to every tree row.
+3. Render Today as a live projection of the same task records.
+4. Manage daily templates in the native inspector.
+5. Run rollover on load and at a short registered interval.
+6. Verify, document, commit, push, and wait for green CI.
+
+## Checkpoint 8 verification
+
+- Schema-v1 task data migrates to schema v2 without content changes.
+- Thirty-four tests pass.
+- Tests cover 24-hour completed retention, unfinished carry-forward, local
+  midnight replacement, template rename synchronization, and template
+  deletion.
+- `npm run check` passed with lint, all tests, TypeScript, and production
+  bundle green.

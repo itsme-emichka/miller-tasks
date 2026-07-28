@@ -26,6 +26,10 @@ automatically while all checks are green.
       rows while preserving selection, keyboard, and drag behavior.
 - [x] 7b. Remove automatic column scrolling so horizontal viewport movement is
       exclusively controlled by the user.
+- [x] 8. Upgrade to schema v2 with Today markers, 24-hour completed retention,
+      daily templates, and local-day instance rollover.
+- [ ] 9. Add the pinned Today column, inline calendar icon, daily-template
+      inspector controls, scheduler, full QA, and documentation.
 
 ## Product constraints
 
@@ -37,6 +41,8 @@ automatically while all checks are green.
 - The task inspector is a separate ItemView in Obsidian's collapsible right
   sidebar and never consumes space inside the column browser.
 - JSON persistence through the Obsidian plugin data API.
+- A pinned Today projection shares the original task records; daily templates
+  create isolated instances that reset at local midnight.
 - Manual ordering and drag-and-drop moves.
 - Completed tasks hidden by default and available through a global toggle.
 - No recurrence, reminders, time zones, smart lists, multiple lists, search,
@@ -44,5 +50,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All seven checkpoints are complete. The first beta prototype is ready for
-installation and feedback.
+Checkpoint 8 is complete. The next work is checkpoint 9: the pinned Today UI,
+daily-template controls, scheduler, and full integration QA.

@@ -27,12 +27,25 @@ export interface TaskRecord {
   createdAt: number;
   updatedAt: number;
   completedAt: number | null;
+  today: boolean;
+  todayAddedAt: number | null;
+  dailyTemplateId: string | null;
+  generatedForDate: string | null;
+}
+
+export interface DailyTaskTemplate {
+  id: string;
+  title: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface PluginData {
-  schemaVersion: 1;
+  schemaVersion: 2;
   showCompleted: boolean;
   tasks: TaskRecord[];
+  dailyTemplates: DailyTaskTemplate[];
 }
 
 export type TaskUpdate = Partial<
@@ -59,6 +72,8 @@ export type TaskErrorCode =
   | "attachment-invalid"
   | "cycle"
   | "data-invalid"
+  | "daily-template-missing"
+  | "daily-task-invalid"
   | "date-invalid"
   | "depth-exceeded"
   | "duplicate-id"

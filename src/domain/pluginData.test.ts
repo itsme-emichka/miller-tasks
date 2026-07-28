@@ -28,14 +28,19 @@ function task(
     createdAt: 1,
     updatedAt: 1,
     completedAt: null,
+    today: false,
+    todayAddedAt: null,
+    dailyTemplateId: null,
+    generatedForDate: null,
   };
 }
 
 function data(tasks: TaskRecord[]): PluginData {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     showCompleted: false,
     tasks,
+    dailyTemplates: [],
   };
 }
 
@@ -47,6 +52,36 @@ describe("parsePluginData", () => {
     const parsed = parsePluginData(source);
     source.tasks[0]!.title = "Changed outside";
     expect(parsed.tasks[0]?.title).toBe("root");
+  });
+
+  it("migrates schema-v1 tasks without changing their content", () => {
+    const sourceTask = task("legacy", null, 0);
+    const {
+      today: _today,
+      todayAddedAt: _todayAddedAt,
+      dailyTemplateId: _dailyTemplateId,
+      generatedForDate: _generatedForDate,
+      ...legacyTask
+    } = sourceTask;
+
+    const migrated = parsePluginData({
+      schemaVersion: 1,
+      showCompleted: true,
+      tasks: [legacyTask],
+    });
+
+    expect(migrated).toMatchObject({
+      schemaVersion: 2,
+      showCompleted: true,
+      dailyTemplates: [],
+    });
+    expect(migrated.tasks[0]).toMatchObject({
+      id: "legacy",
+      today: false,
+      todayAddedAt: null,
+      dailyTemplateId: null,
+      generatedForDate: null,
+    });
   });
 
   it("rejects missing parents, cycles, and broken sibling order", () => {

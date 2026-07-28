@@ -10,7 +10,13 @@ import {
   parsePluginData,
 } from "./pluginData";
 import {
+  COMPLETED_TODAY_RETENTION_MS,
+  formatLocalDate,
+  isTodayTaskVisible,
+} from "./daily";
+import {
   CreateTaskInput,
+  DailyTaskTemplate,
   MAX_TASK_DEPTH,
   PluginData,
   TaskAttachment,
@@ -61,6 +67,7 @@ export class TaskStore {
     return this.data.tasks
       .filter(
         (task) =>
+          task.dailyTemplateId === null &&
           task.parentId === parentId &&
           (includeCompleted || !task.completed),
       )
@@ -88,6 +95,51 @@ export class TaskStore {
     );
   }
 
+  getTodayTasks(now = this.now()): TaskRecord[] {
+    const templateOrder = new Map(
+      this.data.dailyTemplates.map((template) => [
+        template.id,
+        template.order,
+      ]),
+    );
+    return this.data.tasks
+      .filter((task) => isTodayTaskVisible(task, now))
+      .sort((left, right) => {
+        if (
+          left.dailyTemplateId !== null &&
+          right.dailyTemplateId !== null
+        ) {
+          return (
+            (templateOrder.get(left.dailyTemplateId) ?? left.order) -
+            (templateOrder.get(right.dailyTemplateId) ?? right.order)
+          );
+        }
+        if (left.dailyTemplateId !== null) {
+          return -1;
+        }
+        if (right.dailyTemplateId !== null) {
+          return 1;
+        }
+        return (
+          (left.todayAddedAt ?? left.createdAt) -
+          (right.todayAddedAt ?? right.createdAt)
+        );
+      })
+      .map(cloneTask);
+  }
+
+  getDailyTemplates(): DailyTaskTemplate[] {
+    return this.data.dailyTemplates.map((template) => ({
+      ...template,
+    }));
+  }
+
+  getTasksForDailyTemplate(templateId: string): TaskRecord[] {
+    return this.data.tasks
+      .filter((task) => task.dailyTemplateId === templateId)
+      .map(cloneTask);
+  }
+
   subscribe(listener: StoreListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -103,7 +155,13 @@ export class TaskStore {
   createTask(input: CreateTaskInput = {}): TaskRecord {
     const parentId = input.parentId ?? null;
     if (parentId !== null) {
-      this.requireTask(parentId);
+      const parent = this.requireTask(parentId);
+      if (parent.dailyTemplateId !== null) {
+        throw new TaskDomainError(
+          "daily-task-invalid",
+          "Daily task instances cannot have subtasks.",
+        );
+      }
       if (this.getDepth(parentId) >= MAX_TASK_DEPTH) {
         throw new TaskDomainError(
           "depth-exceeded",
@@ -112,8 +170,11 @@ export class TaskStore {
       }
     }
 
-    const id = input.id ?? this.idFactory();
-    if (this.data.tasks.some((task) => task.id === id)) {
+    const id = input.id ?? this.createUniqueId();
+    if (
+      this.data.tasks.some((task) => task.id === id) ||
+      this.data.dailyTemplates.some((template) => template.id === id)
+    ) {
       throw new TaskDomainError(
         "duplicate-id",
         `Task ID already exists: ${id}`,
@@ -138,6 +199,10 @@ export class TaskStore {
       createdAt: timestamp,
       updatedAt: timestamp,
       completedAt: null,
+      today: false,
+      todayAddedAt: null,
+      dailyTemplateId: null,
+      generatedForDate: null,
     };
 
     this.data.tasks.push(task);
@@ -223,8 +288,20 @@ export class TaskStore {
     newIndex?: number,
   ): TaskRecord {
     const task = this.requireTask(id);
+    if (task.dailyTemplateId !== null) {
+      throw new TaskDomainError(
+        "daily-task-invalid",
+        "Daily task instances cannot move into the task tree.",
+      );
+    }
     if (newParentId !== null) {
-      this.requireTask(newParentId);
+      const newParent = this.requireTask(newParentId);
+      if (newParent.dailyTemplateId !== null) {
+        throw new TaskDomainError(
+          "daily-task-invalid",
+          "Tasks cannot move below a daily task instance.",
+        );
+      }
     }
 
     const subtreeIds = new Set(this.getSubtreeIds(id));
@@ -276,6 +353,12 @@ export class TaskStore {
     attachment: TaskAttachment,
   ): TaskRecord {
     const task = this.requireTask(taskId);
+    if (task.dailyTemplateId !== null) {
+      throw new TaskDomainError(
+        "attachment-invalid",
+        "Daily task instances do not support attachments.",
+      );
+    }
     const normalized = normalizeAttachment(attachment);
     if (
       task.attachments.some(
@@ -329,6 +412,135 @@ export class TaskStore {
     this.commit();
   }
 
+  setTaskToday(id: string, today: boolean): TaskRecord {
+    const task = this.requireTask(id);
+    if (task.dailyTemplateId !== null) {
+      return cloneTask(task);
+    }
+    if (task.today === today) {
+      return cloneTask(task);
+    }
+    task.today = today;
+    task.todayAddedAt = today ? this.now() : null;
+    task.updatedAt = this.now();
+    this.commit();
+    return cloneTask(task);
+  }
+
+  createDailyTemplate(title: string): DailyTaskTemplate {
+    const timestamp = this.now();
+    const template: DailyTaskTemplate = {
+      id: this.createUniqueId(),
+      title: normalizeTitle(title),
+      order: this.data.dailyTemplates.length,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    this.data.dailyTemplates.push(template);
+    this.createDailyInstance(
+      template,
+      formatLocalDate(timestamp),
+      timestamp,
+    );
+    this.commit();
+    return { ...template };
+  }
+
+  updateDailyTemplate(
+    id: string,
+    title: string,
+  ): DailyTaskTemplate {
+    const template = this.requireDailyTemplate(id);
+    const normalizedTitle = normalizeTitle(title);
+    const timestamp = this.now();
+    template.title = normalizedTitle;
+    template.updatedAt = timestamp;
+    for (const task of this.data.tasks) {
+      if (task.dailyTemplateId === id) {
+        task.title = normalizedTitle;
+        task.updatedAt = timestamp;
+      }
+    }
+    this.commit();
+    return { ...template };
+  }
+
+  deleteDailyTemplate(id: string): TaskRecord[] {
+    this.requireDailyTemplate(id);
+    const removed = this.getTasksForDailyTemplate(id);
+    this.data.dailyTemplates = this.data.dailyTemplates.filter(
+      (template) => template.id !== id,
+    );
+    this.data.dailyTemplates.forEach((template, order) => {
+      template.order = order;
+    });
+    this.data.tasks = this.data.tasks.filter(
+      (task) => task.dailyTemplateId !== id,
+    );
+    this.commit();
+    return removed;
+  }
+
+  rollover(now = this.now()): {
+    created: TaskRecord[];
+    removed: TaskRecord[];
+    clearedToday: string[];
+  } {
+    const today = formatLocalDate(now);
+    const removed = this.data.tasks
+      .filter(
+        (task) =>
+          task.dailyTemplateId !== null &&
+          task.generatedForDate !== today,
+      )
+      .map(cloneTask);
+    if (removed.length > 0) {
+      const removedIds = new Set(removed.map((task) => task.id));
+      this.data.tasks = this.data.tasks.filter(
+        (task) => !removedIds.has(task.id),
+      );
+    }
+
+    const clearedToday: string[] = [];
+    for (const task of this.data.tasks) {
+      if (
+        task.dailyTemplateId === null &&
+        task.today &&
+        task.completed &&
+        task.completedAt !== null &&
+        task.completedAt + COMPLETED_TODAY_RETENTION_MS <= now
+      ) {
+        task.today = false;
+        task.todayAddedAt = null;
+        task.updatedAt = now;
+        clearedToday.push(task.id);
+      }
+    }
+
+    const created: TaskRecord[] = [];
+    for (const template of this.data.dailyTemplates) {
+      const exists = this.data.tasks.some(
+        (task) =>
+          task.dailyTemplateId === template.id &&
+          task.generatedForDate === today,
+      );
+      if (!exists) {
+        created.push(
+          cloneTask(this.createDailyInstance(template, today, now)),
+        );
+      }
+    }
+
+    if (
+      removed.length > 0 ||
+      clearedToday.length > 0 ||
+      created.length > 0
+    ) {
+      this.commit();
+    }
+    return { created, removed, clearedToday };
+  }
+
   async flush(): Promise<void> {
     await this.persistence?.flush();
   }
@@ -342,6 +554,19 @@ export class TaskStore {
       );
     }
     return task;
+  }
+
+  private requireDailyTemplate(id: string): DailyTaskTemplate {
+    const template = this.data.dailyTemplates.find(
+      (candidate) => candidate.id === id,
+    );
+    if (!template) {
+      throw new TaskDomainError(
+        "daily-template-missing",
+        `Daily template not found: ${id}`,
+      );
+    }
+    return template;
   }
 
   private getSubtreeIds(id: string): string[] {
@@ -374,7 +599,10 @@ export class TaskStore {
     parentId: string | null,
   ): TaskRecord[] {
     return this.data.tasks
-      .filter((task) => task.parentId === parentId)
+      .filter(
+        (task) =>
+          task.dailyTemplateId === null && task.parentId === parentId,
+      )
       .sort((left, right) => left.order - right.order);
   }
 
@@ -407,6 +635,51 @@ export class TaskStore {
           listener(error);
         }
       });
+  }
+
+  private createDailyInstance(
+    template: DailyTaskTemplate,
+    date: string,
+    timestamp: number,
+  ): TaskRecord {
+    const task: TaskRecord = {
+      id: this.createUniqueId(),
+      parentId: null,
+      title: template.title,
+      completed: false,
+      description: "",
+      tags: [],
+      dueDate: null,
+      dueTime: null,
+      priority: "none",
+      flagged: false,
+      url: null,
+      attachments: [],
+      order: template.order,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      completedAt: null,
+      today: true,
+      todayAddedAt: timestamp,
+      dailyTemplateId: template.id,
+      generatedForDate: date,
+    };
+    this.data.tasks.push(task);
+    return task;
+  }
+
+  private createUniqueId(): string {
+    const id = this.idFactory();
+    if (
+      this.data.tasks.some((task) => task.id === id) ||
+      this.data.dailyTemplates.some((template) => template.id === id)
+    ) {
+      throw new TaskDomainError(
+        "duplicate-id",
+        `Generated ID already exists: ${id}`,
+      );
+    }
+    return id;
   }
 }
 
