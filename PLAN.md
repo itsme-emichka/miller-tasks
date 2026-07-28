@@ -35,7 +35,7 @@ automatically while all checks are green.
 - [x] 9c. Add the rollover scheduler, run full QA, and finish documentation.
 - [x] 10a. Keep daily instances below ordinary Today tasks and separate the
       two groups with a single theme-native hairline.
-- [ ] 10b. Project leaf descendants into Today and derive parent completion
+- [x] 10b. Project leaf descendants into Today and derive parent completion
       from completed children.
 - [ ] 10c. Keep newly completed tree rows visible until the next local day.
 
@@ -58,5 +58,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 10a is complete. The next work is recursive leaf projection and
-derived parent completion.
+Checkpoint 10b is complete. The next work is next-day retention for completed
+tree rows.

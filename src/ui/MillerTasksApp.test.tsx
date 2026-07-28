@@ -139,6 +139,53 @@ describe("MillerTasksApp", () => {
     expect(divider?.nextElementSibling).toBe(rows[1]);
   });
 
+  it("adds only recursive leaf descendants when a parent enters Today", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Parent" });
+    const directLeaf = store.createTask({
+      parentId: parent.id,
+      title: "Direct leaf",
+    });
+    const branch = store.createTask({
+      parentId: parent.id,
+      title: "Branch",
+    });
+    const nestedLeaf = store.createTask({
+      parentId: branch.id,
+      title: "Nested leaf",
+    });
+    render(<MillerTasksApp store={store} />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Add Parent to today",
+      }),
+    );
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+
+    expect(
+      within(today).queryByRole("button", { name: "Parent" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(today).queryByRole("button", { name: "Branch" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(today).getByRole("button", { name: "Direct leaf" }),
+    ).toBeVisible();
+    expect(
+      within(today).getByRole("button", { name: "Nested leaf" }),
+    ).toBeVisible();
+    expect(store.getTask(directLeaf.id)?.today).toBe(true);
+    expect(store.getTask(nestedLeaf.id)?.today).toBe(true);
+    expect(
+      screen.getByRole("button", {
+        name: "Remove Parent from today",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("creates a task, selects it, and opens its child column", () => {
     const store = createStore();
     const { container } = render(<MillerTasksApp store={store} />);

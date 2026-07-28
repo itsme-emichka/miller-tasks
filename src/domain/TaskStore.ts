@@ -206,6 +206,7 @@ export class TaskStore {
     };
 
     this.data.tasks.push(task);
+    this.syncAncestorCompletion(parentId, timestamp);
     this.commit();
     return cloneTask(task);
   }
@@ -261,6 +262,7 @@ export class TaskStore {
       task.completedAt = completed ? timestamp : null;
       task.updatedAt = timestamp;
     }
+    this.syncAncestorCompletion(target.parentId, timestamp);
 
     this.commit();
     return affectedIds;
@@ -278,6 +280,7 @@ export class TaskStore {
       (candidate) => !removedIds.has(candidate.id),
     );
     this.normalizeSiblings(parentId);
+    this.syncAncestorCompletion(parentId, this.now());
     this.commit();
     return removed;
   }
@@ -338,7 +341,12 @@ export class TaskStore {
       this.normalizeSiblings(oldParentId);
     }
 
-    task.updatedAt = this.now();
+    const timestamp = this.now();
+    task.updatedAt = timestamp;
+    this.syncAncestorCompletion(oldParentId, timestamp);
+    if (newParentId !== oldParentId) {
+      this.syncAncestorCompletion(newParentId, timestamp);
+    }
     this.commit();
     return cloneTask(task);
   }
@@ -412,19 +420,44 @@ export class TaskStore {
     this.commit();
   }
 
-  setTaskToday(id: string, today: boolean): TaskRecord {
+  isTaskScheduledForToday(id: string): boolean {
     const task = this.requireTask(id);
     if (task.dailyTemplateId !== null) {
-      return cloneTask(task);
+      return true;
     }
-    if (task.today === today) {
-      return cloneTask(task);
+    return this.getLeafTaskIds(id).every(
+      (taskId) => this.requireTask(taskId).today,
+    );
+  }
+
+  setTaskToday(id: string, today: boolean): TaskRecord[] {
+    const task = this.requireTask(id);
+    if (task.dailyTemplateId !== null) {
+      return [cloneTask(task)];
     }
-    task.today = today;
-    task.todayAddedAt = today ? this.now() : null;
-    task.updatedAt = this.now();
-    this.commit();
-    return cloneTask(task);
+    const leafIds = new Set(this.getLeafTaskIds(id));
+    const subtreeIds = this.getSubtreeIds(id);
+    const timestamp = this.now();
+    let changed = false;
+
+    for (const taskId of subtreeIds) {
+      const candidate = this.requireTask(taskId);
+      const shouldBeToday = leafIds.has(taskId) ? today : false;
+      if (candidate.today === shouldBeToday) {
+        continue;
+      }
+      candidate.today = shouldBeToday;
+      candidate.todayAddedAt = shouldBeToday ? timestamp : null;
+      candidate.updatedAt = timestamp;
+      changed = true;
+    }
+
+    if (changed) {
+      this.commit();
+    }
+    return [...leafIds].map((taskId) =>
+      cloneTask(this.requireTask(taskId)),
+    );
   }
 
   createDailyTemplate(title: string): DailyTaskTemplate {
@@ -593,6 +626,40 @@ export class TaskStore {
         ...children.map((child) => this.getSubtreeHeight(child.id)),
       )
     );
+  }
+
+  private getLeafTaskIds(id: string): string[] {
+    const task = this.requireTask(id);
+    if (task.dailyTemplateId !== null) {
+      return [task.id];
+    }
+    const children = this.orderedMutableChildren(id);
+    if (children.length === 0) {
+      return [id];
+    }
+    return children.flatMap((child) =>
+      this.getLeafTaskIds(child.id),
+    );
+  }
+
+  private syncAncestorCompletion(
+    parentId: string | null,
+    timestamp: number,
+  ): void {
+    let currentId = parentId;
+    while (currentId !== null) {
+      const parent = this.requireTask(currentId);
+      const children = this.orderedMutableChildren(parent.id);
+      if (children.length > 0) {
+        const completed = children.every((child) => child.completed);
+        if (parent.completed !== completed) {
+          parent.completed = completed;
+          parent.completedAt = completed ? timestamp : null;
+          parent.updatedAt = timestamp;
+        }
+      }
+      currentId = parent.parentId;
+    }
   }
 
   private orderedMutableChildren(

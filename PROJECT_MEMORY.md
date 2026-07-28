@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 10a complete; 10b and 10c pending.
+- Checkpoint: 10b complete; 10c pending.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: recursive leaf projection and derived parent completion.
+- Next work: retain completed tree rows until the next local day.
 
 The plugin loads and migrates validated schema-v1 or schema-v2 task data before
 registering views.
@@ -457,3 +457,15 @@ horizontal viewport.
 - A single one-pixel Obsidian theme border separates the two groups only when
   both are present; no new heading or label was added.
 - Domain ordering and rendered separator placement are covered by tests.
+
+## Checkpoint 10b verification
+
+- Scheduling a leaf task adds that task to Today.
+- Scheduling any branch recursively adds only its deepest leaf descendants;
+  the branch and intermediate nodes do not appear in Today.
+- A branch calendar icon is active when all of its current leaves are in
+  Today; removing the branch clears those leaf projections together.
+- Completing the final incomplete child automatically completes its ancestors.
+  Reopening a child reopens every affected ancestor without reopening siblings.
+- Tree creation, deletion, and reparenting also resynchronize affected parent
+  completion states.

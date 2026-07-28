@@ -241,6 +241,66 @@ describe("TaskStore", () => {
       daily.id,
     ]);
   });
+
+  it("projects only recursive leaf descendants into Today", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Parent" });
+    const directLeaf = store.createTask({
+      parentId: parent.id,
+      title: "Direct leaf",
+    });
+    const branch = store.createTask({
+      parentId: parent.id,
+      title: "Nested branch",
+    });
+    const nestedLeaf = store.createTask({
+      parentId: branch.id,
+      title: "Nested leaf",
+    });
+
+    store.setTaskToday(parent.id, true);
+
+    expect(store.getTodayTasks().map((task) => task.id)).toEqual([
+      directLeaf.id,
+      nestedLeaf.id,
+    ]);
+    expect(store.getTask(parent.id)?.today).toBe(false);
+    expect(store.getTask(branch.id)?.today).toBe(false);
+    expect(store.isTaskScheduledForToday(parent.id)).toBe(true);
+
+    store.setTaskToday(parent.id, false);
+    expect(store.getTodayTasks()).toHaveLength(0);
+    expect(store.isTaskScheduledForToday(parent.id)).toBe(false);
+  });
+
+  it("completes and reopens ancestors from child completion", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Parent" });
+    const first = store.createTask({
+      parentId: parent.id,
+      title: "First",
+    });
+    const branch = store.createTask({
+      parentId: parent.id,
+      title: "Branch",
+    });
+    const nested = store.createTask({
+      parentId: branch.id,
+      title: "Nested",
+    });
+
+    store.completeSubtree(first.id, true);
+    expect(store.getTask(parent.id)?.completed).toBe(false);
+    store.completeSubtree(nested.id, true);
+
+    expect(store.getTask(branch.id)?.completed).toBe(true);
+    expect(store.getTask(parent.id)?.completed).toBe(true);
+
+    store.completeSubtree(nested.id, false);
+    expect(store.getTask(branch.id)?.completed).toBe(false);
+    expect(store.getTask(parent.id)?.completed).toBe(false);
+    expect(store.getTask(first.id)?.completed).toBe(true);
+  });
 });
 
 function expectTaskError(

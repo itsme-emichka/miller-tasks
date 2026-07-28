@@ -426,6 +426,7 @@ function TaskColumn({
               onFinishEditing={onFinishEditing}
               onSelect={() => onSelectTask(task.id, columnIndex)}
               onTaskCompletion={onTaskCompletion}
+              todaySelected={store.isTaskScheduledForToday(task.id)}
               onToggleToday={onToggleToday}
               onKeyboardNavigate={(direction) =>
                 onKeyboardNavigate(
@@ -460,6 +461,7 @@ interface TaskRowProps {
   onFinishEditing: () => void;
   onSelect: () => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  todaySelected: boolean;
   onToggleToday: (taskId: string, today: boolean) => void;
   onKeyboardNavigate: (direction: KeyboardNavigation) => void;
   store: TaskStore;
@@ -474,6 +476,7 @@ function TaskRow({
   onFinishEditing,
   onSelect,
   onTaskCompletion,
+  todaySelected,
   onToggleToday,
   onKeyboardNavigate,
   store,
@@ -601,18 +604,18 @@ function TaskRow({
       <button
         type="button"
         className="miller-task-today-toggle"
-        data-active={task.today}
-        aria-label={`${task.today ? "Remove" : "Add"} ${task.title} ${
-          task.today ? "from" : "to"
+        data-active={todaySelected}
+        aria-label={`${todaySelected ? "Remove" : "Add"} ${task.title} ${
+          todaySelected ? "from" : "to"
         } today`}
-        aria-pressed={task.today}
+        aria-pressed={todaySelected}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation();
-          onToggleToday(task.id, !task.today);
+          onToggleToday(task.id, !todaySelected);
         }}
       >
-        <TodayIcon active={task.today} />
+        <TodayIcon active={todaySelected} />
       </button>
     </div>
   );
