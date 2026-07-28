@@ -42,6 +42,8 @@ automatically while all checks are green.
       inspector.
 - [x] 10e. Delete a focused task row with Delete or Backspace, confirming only
       when the task owns a subtree.
+- [x] 10f. Replace the selected-path side stripe with accent-colored,
+      underlined task text.
 
 ## Product constraints
 
@@ -63,5 +65,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All requested checkpoint-10 changes, including keyboard deletion, are
+All requested checkpoint-10 interaction and selection-style changes are
 complete.

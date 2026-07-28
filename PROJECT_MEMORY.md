@@ -383,7 +383,8 @@ The correction was verified on 2026-07-17:
 - Checkboxes use Obsidian's native `task-list-item-checkbox` class.
 - Computed task-row bottom border is `0px`; unselected text has `0px` border
   and no box shadow.
-- Selection is represented only by the existing two-pixel Finder accent.
+- Selection is represented by underlined task text in Obsidian's interactive
+  accent color, without a side stripe.
 - `npm run check` remains green with 31 tests after the viewport regression
   coverage.
 
@@ -503,3 +504,13 @@ horizontal viewport.
   the exact subtask count before the full subtree is removed.
 - Inline rename, new-task fields, inspector fields, and other text inputs keep
   normal Delete and Backspace behavior.
+
+## Checkpoint 10f verification
+
+- Every selected node in the active Miller path uses the current Obsidian
+  interactive accent for both its text and one-pixel underline.
+- The previous two-pixel stripe is removed completely.
+- A selected completed task keeps its line-through together with the selection
+  underline.
+- Overdue and completed colors apply normally until the row becomes selected;
+  selection then takes visual precedence as the user requested.
