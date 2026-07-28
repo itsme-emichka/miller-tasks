@@ -29,6 +29,7 @@ import type {
 } from "react";
 
 import { isTaskOverdue } from "../domain/due";
+import { isTreeTaskVisible } from "../domain/daily";
 import { TaskStore } from "../domain/TaskStore";
 import {
   MAX_TASK_DEPTH,
@@ -47,6 +48,7 @@ interface MillerTasksAppProps {
   onTaskSelected?: (taskId: string | null) => void;
   onTaskCompletion?: (taskId: string, completed: boolean) => void;
   onTaskMoveError?: (message: string) => void;
+  clock?: () => number;
 }
 
 interface ColumnState {
@@ -73,11 +75,13 @@ export function MillerTasksApp({
   onTaskSelected,
   onTaskCompletion,
   onTaskMoveError,
+  clock = Date.now,
 }: MillerTasksAppProps): JSX.Element {
   const snapshot = useTaskSnapshot(store);
+  const now = useCurrentMinute(clock);
   const todayTasks = useMemo(
-    () => store.getTodayTasks(),
-    [snapshot, store],
+    () => store.getTodayTasks(now),
+    [now, snapshot, store],
   );
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(
@@ -89,9 +93,9 @@ export function MillerTasksApp({
 
   useEffect(() => {
     setSelectedPath((currentPath) =>
-      reconcileSelectedPath(currentPath, snapshot),
+      reconcileSelectedPath(currentPath, snapshot, now),
     );
-  }, [snapshot]);
+  }, [now, snapshot]);
 
   useEffect(() => {
     onTaskSelected?.(selectedPath.at(-1) ?? null);
@@ -284,7 +288,7 @@ export function MillerTasksApp({
               <TaskColumn
                 key={column.parentId ?? "__root__"}
                 column={column}
-                tasks={getChildren(snapshot, column.parentId)}
+                tasks={getChildren(snapshot, column.parentId, now)}
                 columnIndex={columnIndex}
                 editingTaskId={editingTaskId}
                 onBeginEditing={setEditingTaskId}
@@ -679,6 +683,21 @@ function useTaskSnapshot(store: TaskStore): PluginData {
   return useMemo(() => store.getSnapshot(), [revision, store]);
 }
 
+function useCurrentMinute(clock: () => number): number {
+  const [now, setNow] = useState(clock);
+
+  useEffect(() => {
+    setNow(clock());
+    const interval = window.setInterval(
+      () => setNow(clock()),
+      60_000,
+    );
+    return () => window.clearInterval(interval);
+  }, [clock]);
+
+  return now;
+}
+
 function buildColumns(selectedPath: readonly string[]): ColumnState[] {
   const columns: ColumnState[] = [
     {
@@ -705,13 +724,13 @@ function buildColumns(selectedPath: readonly string[]): ColumnState[] {
 function getChildren(
   snapshot: PluginData,
   parentId: string | null,
+  now: number,
 ): TaskRecord[] {
   return snapshot.tasks
     .filter(
       (task) =>
-        task.dailyTemplateId === null &&
         task.parentId === parentId &&
-        (snapshot.showCompleted || !task.completed),
+        isTreeTaskVisible(task, snapshot.showCompleted, now),
     )
     .sort((left, right) => left.order - right.order);
 }
@@ -719,13 +738,14 @@ function getChildren(
 function reconcileSelectedPath(
   selectedPath: readonly string[],
   snapshot: PluginData,
+  now: number,
 ): string[] {
   for (let index = selectedPath.length - 1; index >= 0; index -= 1) {
     const taskId = selectedPath[index];
     if (!taskId) {
       continue;
     }
-    const path = buildAncestryPath(taskId, snapshot);
+    const path = buildAncestryPath(taskId, snapshot, now);
     if (path) {
       if (
         path.length === selectedPath.length &&
@@ -743,16 +763,14 @@ function reconcileSelectedPath(
 function buildAncestryPath(
   taskId: string,
   snapshot: PluginData,
+  now: number,
 ): string[] | null {
   const byId = new Map(snapshot.tasks.map((task) => [task.id, task]));
   const reversedPath: string[] = [];
   let current = byId.get(taskId);
 
   while (current) {
-    if (current.dailyTemplateId !== null) {
-      return null;
-    }
-    if (!snapshot.showCompleted && current.completed) {
+    if (!isTreeTaskVisible(current, snapshot.showCompleted, now)) {
       return null;
     }
     reversedPath.push(current.id);

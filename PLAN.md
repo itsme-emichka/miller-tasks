@@ -37,7 +37,7 @@ automatically while all checks are green.
       two groups with a single theme-native hairline.
 - [x] 10b. Project leaf descendants into Today and derive parent completion
       from completed children.
-- [ ] 10c. Keep newly completed tree rows visible until the next local day.
+- [x] 10c. Keep newly completed tree rows visible until the next local day.
 
 ## Product constraints
 
@@ -52,11 +52,11 @@ automatically while all checks are green.
 - A pinned Today projection shares the original task records; daily templates
   create isolated instances that reset at local midnight.
 - Manual ordering and drag-and-drop moves.
-- Completed tasks hidden by default and available through a global toggle.
+- Tasks completed today stay struck through in the tree; older completed tasks
+  are hidden by default and available through a global toggle.
 - No recurrence, reminders, time zones, smart lists, multiple lists, search,
   arbitrary properties, or mobile UI in v1.
 
 ## Current checkpoint
 
-Checkpoint 10b is complete. The next work is next-day retention for completed
-tree rows.
+All requested checkpoint-10 changes are complete.

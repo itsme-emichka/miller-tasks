@@ -15,7 +15,7 @@ function createStore(): TaskStore {
   let id = 0;
   return new TaskStore(createDefaultPluginData(), undefined, {
     idFactory: () => `task-${++id}`,
-    now: () => id + 100,
+    now: () => Date.now(),
   });
 }
 
@@ -112,7 +112,7 @@ describe("MillerTasksApp", () => {
       screen.queryByRole("button", {
         name: "Remove Shared task from today",
       }),
-    ).not.toBeInTheDocument();
+    ).toHaveAttribute("aria-pressed", "true");
     expect(store.getTask("task-1")?.completed).toBe(true);
   });
 
@@ -211,10 +211,21 @@ describe("MillerTasksApp", () => {
     ).toBeVisible();
   });
 
-  it("renames inline and hides a completed task by default", () => {
-    const store = createStore();
+  it("keeps a completed row struck through until the next day", () => {
+    let now = new Date(2026, 6, 18, 10).getTime();
+    let id = 0;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `task-${++id}`,
+        now: () => now,
+      },
+    );
     store.createTask({ title: "Original" });
-    render(<MillerTasksApp store={store} />);
+    const { rerender } = render(
+      <MillerTasksApp store={store} clock={() => now} />,
+    );
 
     fireEvent.doubleClick(
       screen.getByRole("button", { name: "Original" }),
@@ -231,13 +242,29 @@ describe("MillerTasksApp", () => {
     fireEvent.click(
       screen.getByRole("checkbox", { name: "Complete Renamed" }),
     );
+    const completedRow = screen
+      .getByRole("button", { name: "Renamed" })
+      .closest(".miller-task-row");
+    expect(completedRow).toHaveAttribute("data-completed", "true");
+
+    now = new Date(2026, 6, 19, 0, 1).getTime();
+    rerender(<MillerTasksApp store={store} clock={() => now} />);
     expect(
       screen.queryByRole("button", { name: "Renamed" }),
     ).not.toBeInTheDocument();
   });
 
   it("shows completed tasks when the store setting is enabled", () => {
-    const store = createStore();
+    let id = 0;
+    const yesterday = Date.now() - 24 * 60 * 60 * 1_000;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `task-${++id}`,
+        now: () => yesterday,
+      },
+    );
     const task = store.createTask({ title: "Completed" });
     store.completeSubtree(task.id, true);
     const { container } = render(<MillerTasksApp store={store} />);

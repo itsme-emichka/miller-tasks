@@ -30,3 +30,24 @@ export function isTodayTaskVisible(
     task.completedAt + COMPLETED_TODAY_RETENTION_MS > now
   );
 }
+
+export function isTreeTaskVisible(
+  task: {
+    completed: boolean;
+    completedAt: number | null;
+    dailyTemplateId: string | null;
+  },
+  showCompleted: boolean,
+  now: number,
+): boolean {
+  if (task.dailyTemplateId !== null) {
+    return false;
+  }
+  if (!task.completed || showCompleted) {
+    return true;
+  }
+  return (
+    task.completedAt !== null &&
+    formatLocalDate(task.completedAt) === formatLocalDate(now)
+  );
+}

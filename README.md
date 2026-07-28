@@ -20,7 +20,8 @@ Obsidian theme.
 - Define daily tasks that receive one fresh incomplete instance each local
   day.
 - Create tasks and subtasks directly at the end of each visible column.
-- Rename inline, complete tasks, and hide completed work by default.
+- Rename inline and complete tasks. A completed tree row stays struck through
+  for the rest of its local day; older completions are hidden by default.
 - Keep description, tags, local due date/time, priority, flag, and an absolute
   HTTP/HTTPS URL in the native right-sidebar inspector.
 - Highlight incomplete overdue tasks with Obsidian's error color.
@@ -85,7 +86,8 @@ Completing a parent completes its full subtree after confirmation. Reopening a
 completed parent reopens only that parent. A completed ordinary Today task
 remains struck through for 24 hours. At local midnight, every daily-task
 instance is removed and replaced with a new incomplete instance; an unfinished
-ordinary Today task carries forward.
+ordinary Today task carries forward. In the hierarchy itself, a newly
+completed row remains visible and struck through until the next local day.
 
 ## Data and files
 

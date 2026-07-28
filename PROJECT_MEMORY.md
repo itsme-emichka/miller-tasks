@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 10b complete; 10c pending.
+- Checkpoint: 10 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: retain completed tree rows until the next local day.
+- Next work: user testing and issue-driven refinement.
 
 The plugin loads and migrates validated schema-v1 or schema-v2 task data before
 registering views.
@@ -469,3 +469,15 @@ horizontal viewport.
   Reopening a child reopens every affected ancestor without reopening siblings.
 - Tree creation, deletion, and reparenting also resynchronize affected parent
   completion states.
+
+## Checkpoint 10c verification
+
+- A tree task completed on the current local date remains visible with the
+  existing line-through treatment, even when global completed visibility is
+  off.
+- The task disappears from the tree after local midnight; the global command
+  can still reveal it.
+- The view keeps its own minute-resolution clock so date visibility changes
+  without requiring a task mutation or moving the horizontal viewport.
+- Today remains independent: an ordinary Today task still uses its exact
+  24-hour completed retention.
