@@ -29,6 +29,30 @@
   letter-spacing: -0.02em;
 }
 
+.miller-tasks-workspace {
+  display: grid;
+  grid-template-columns: var(--miller-column-width) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+.miller-today-column {
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  border-right: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.miller-today-empty {
+  margin: 0;
+  padding: 0.55rem 1rem 0.55rem 2.35rem;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
 .miller-tasks-columns {
   display: flex;
   min-width: 0;
@@ -53,12 +77,17 @@
 
 .miller-task-row {
   display: grid;
-  grid-template-columns: 1.4rem minmax(0, 1fr);
+  grid-template-columns: 1.4rem minmax(0, 1fr) 1.5rem;
   align-items: center;
   min-height: 1.9rem;
   padding: 0.1rem 0.75rem;
   background: var(--background-primary);
   touch-action: none;
+}
+
+.miller-today-task-row {
+  grid-template-columns: 1.4rem minmax(0, 1fr);
+  touch-action: auto;
 }
 
 .miller-task-row[data-dragging="true"] {
@@ -118,6 +147,45 @@
 .miller-task-title-input:focus {
   background: var(--background-primary);
   box-shadow: inset 0 -1px 0 var(--interactive-accent);
+}
+
+.miller-task-today-toggle {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0.2rem;
+  border: 0;
+  border-radius: 0;
+  color: var(--text-faint);
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.62;
+}
+
+.miller-task-today-toggle:hover,
+.miller-task-today-toggle:focus-visible,
+.miller-task-today-toggle[data-active="true"] {
+  color: var(--interactive-accent);
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.miller-task-today-toggle:focus-visible {
+  outline: 1px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.miller-task-today-toggle svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .miller-new-task {

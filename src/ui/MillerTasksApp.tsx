@@ -74,6 +74,10 @@ export function MillerTasksApp({
   onTaskMoveError,
 }: MillerTasksAppProps): JSX.Element {
   const snapshot = useTaskSnapshot(store);
+  const todayTasks = useMemo(
+    () => store.getTodayTasks(),
+    [snapshot, store],
+  );
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(
     null,
@@ -131,6 +135,10 @@ export function MillerTasksApp({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+  const completeTask =
+    onTaskCompletion ??
+    ((taskId: string, completed: boolean) =>
+      store.completeSubtree(taskId, completed));
 
   const selectTask = (taskId: string, columnIndex: number): void => {
     setSelectedPath((currentPath) => [
@@ -233,39 +241,107 @@ export function MillerTasksApp({
   return (
     <main className="miller-tasks-shell">
       <h1>Miller Tasks</h1>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <div
-          ref={columnsElement}
-          className="miller-tasks-columns"
-          aria-label="Task hierarchy columns"
+      <div className="miller-tasks-workspace">
+        <section
+          className="miller-today-column"
+          aria-label="Tasks for today"
         >
-          {columns.map((column, columnIndex) => (
-            <TaskColumn
-              key={column.parentId ?? "__root__"}
-              column={column}
-              tasks={getChildren(snapshot, column.parentId)}
-              columnIndex={columnIndex}
-              editingTaskId={editingTaskId}
-              onBeginEditing={setEditingTaskId}
-              onFinishEditing={() => setEditingTaskId(null)}
-              onSelectTask={selectTask}
-              onCreateTask={createTask}
-              onKeyboardNavigate={handleKeyboardNavigation}
-              onTaskCompletion={
-                onTaskCompletion ??
-                ((taskId, completed) =>
-                  store.completeSubtree(taskId, completed))
-              }
-              store={store}
-            />
-          ))}
-        </div>
-      </DndContext>
+          <div className="miller-tasks-list">
+            {todayTasks.map((task) => (
+              <TodayTaskRow
+                key={task.id}
+                task={task}
+                onSelect={() => onTaskSelected?.(task.id)}
+                onTaskCompletion={completeTask}
+              />
+            ))}
+            {todayTasks.length === 0 ? (
+              <p className="miller-today-empty">No tasks for today</p>
+            ) : null}
+          </div>
+        </section>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div
+            ref={columnsElement}
+            className="miller-tasks-columns"
+            aria-label="Task hierarchy columns"
+          >
+            {columns.map((column, columnIndex) => (
+              <TaskColumn
+                key={column.parentId ?? "__root__"}
+                column={column}
+                tasks={getChildren(snapshot, column.parentId)}
+                columnIndex={columnIndex}
+                editingTaskId={editingTaskId}
+                onBeginEditing={setEditingTaskId}
+                onFinishEditing={() => setEditingTaskId(null)}
+                onSelectTask={selectTask}
+                onCreateTask={createTask}
+                onKeyboardNavigate={handleKeyboardNavigation}
+                onTaskCompletion={completeTask}
+                onToggleToday={(taskId, today) =>
+                  store.setTaskToday(taskId, today)
+                }
+                store={store}
+              />
+            ))}
+          </div>
+        </DndContext>
+      </div>
     </main>
+  );
+}
+
+interface TodayTaskRowProps {
+  task: TaskRecord;
+  onSelect: () => void;
+  onTaskCompletion: (taskId: string, completed: boolean) => void;
+}
+
+function TodayTaskRow({
+  task,
+  onSelect,
+  onTaskCompletion,
+}: TodayTaskRowProps): JSX.Element {
+  const handleTitleKeyDown = (
+    event: KeyboardEvent<HTMLSpanElement>,
+  ): void => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect();
+    }
+  };
+
+  return (
+    <div
+      className="miller-task-row miller-today-task-row"
+      data-completed={task.completed}
+      data-overdue={isTaskOverdue(task)}
+      data-task-id={task.id}
+    >
+      <input
+        className="task-list-item-checkbox miller-task-checkbox"
+        type="checkbox"
+        checked={task.completed}
+        aria-label={`${task.completed ? "Reopen" : "Complete"} ${task.title}`}
+        onChange={(event) =>
+          onTaskCompletion(task.id, event.currentTarget.checked)
+        }
+      />
+      <span
+        className="miller-task-title"
+        role="button"
+        tabIndex={0}
+        onClick={onSelect}
+        onKeyDown={handleTitleKeyDown}
+      >
+        {task.title}
+      </span>
+    </div>
   );
 }
 
@@ -283,6 +359,7 @@ interface TaskColumnProps {
     columnIndex: number,
   ) => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  onToggleToday: (taskId: string, today: boolean) => void;
   onKeyboardNavigate: (
     direction: KeyboardNavigation,
     task: TaskRecord,
@@ -303,6 +380,7 @@ function TaskColumn({
   onSelectTask,
   onCreateTask,
   onTaskCompletion,
+  onToggleToday,
   onKeyboardNavigate,
   store,
 }: TaskColumnProps): JSX.Element {
@@ -338,6 +416,7 @@ function TaskColumn({
               onFinishEditing={onFinishEditing}
               onSelect={() => onSelectTask(task.id, columnIndex)}
               onTaskCompletion={onTaskCompletion}
+              onToggleToday={onToggleToday}
               onKeyboardNavigate={(direction) =>
                 onKeyboardNavigate(
                   direction,
@@ -371,6 +450,7 @@ interface TaskRowProps {
   onFinishEditing: () => void;
   onSelect: () => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
+  onToggleToday: (taskId: string, today: boolean) => void;
   onKeyboardNavigate: (direction: KeyboardNavigation) => void;
   store: TaskStore;
 }
@@ -384,6 +464,7 @@ function TaskRow({
   onFinishEditing,
   onSelect,
   onTaskCompletion,
+  onToggleToday,
   onKeyboardNavigate,
   store,
 }: TaskRowProps): JSX.Element {
@@ -507,7 +588,36 @@ function TaskRow({
           {task.title}
         </span>
       )}
+      <button
+        type="button"
+        className="miller-task-today-toggle"
+        data-active={task.today}
+        aria-label={`${task.today ? "Remove" : "Add"} ${task.title} ${
+          task.today ? "from" : "to"
+        } today`}
+        aria-pressed={task.today}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleToday(task.id, !task.today);
+        }}
+      >
+        <TodayIcon active={task.today} />
+      </button>
     </div>
+  );
+}
+
+function TodayIcon({ active }: { active: boolean }): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 3v3M17 3v3M4.5 9h15M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+      {active ? (
+        <path d="m8.5 14 2.2 2.2 4.8-5" />
+      ) : (
+        <path d="M12 12v6M9 15h6" />
+      )}
+    </svg>
   );
 }
 
@@ -586,6 +696,7 @@ function getChildren(
   return snapshot.tasks
     .filter(
       (task) =>
+        task.dailyTemplateId === null &&
         task.parentId === parentId &&
         (snapshot.showCompleted || !task.completed),
     )
@@ -625,6 +736,9 @@ function buildAncestryPath(
   let current = byId.get(taskId);
 
   while (current) {
+    if (current.dailyTemplateId !== null) {
+      return null;
+    }
     if (!snapshot.showCompleted && current.completed) {
       return null;
     }

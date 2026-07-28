@@ -376,14 +376,11 @@ The correction was verified on 2026-07-17:
 
 ## Resume point
 
-Implement checkpoint 9 without changing the accepted timing semantics:
+Continue checkpoint 9 without changing the accepted timing semantics:
 
-1. Pin Today outside the manually scrolling Miller viewport.
-2. Add a compact calendar-plus icon directly to every tree row.
-3. Render Today as a live projection of the same task records.
-4. Manage daily templates in the native inspector.
-5. Run rollover on load and at a short registered interval.
-6. Verify, document, commit, push, and wait for green CI.
+1. Manage daily templates in the native inspector.
+2. Run rollover on load and at a short registered interval.
+3. Verify, document, commit, push, and wait for green CI.
 
 ## Checkpoint 8 verification
 
@@ -392,5 +389,22 @@ Implement checkpoint 9 without changing the accepted timing semantics:
 - Tests cover 24-hour completed retention, unfinished carry-forward, local
   midnight replacement, template rename synchronization, and template
   deletion.
+- `npm run check` passed with lint, all tests, TypeScript, and production
+  bundle green.
+
+## Checkpoint 9a verification
+
+- Today is pinned in its own fixed-width column outside the horizontally
+  scrolling Miller hierarchy.
+- Every tree row exposes a compact calendar-plus control without changing the
+  native Obsidian checkbox-and-text appearance.
+- Clicking the calendar control does not select the task, open the inspector,
+  or move the horizontal viewport.
+- Today renders the same task record, so completion and overdue state update
+  immediately in both locations.
+- Completed Today tasks remain visible even while completed tree tasks are
+  globally hidden.
+- Thirty-six tests pass, including pinned-layout, direct-add, shared
+  completion, and manual-scroll regression coverage.
 - `npm run check` passed with lint, all tests, TypeScript, and production
   bundle green.

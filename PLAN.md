@@ -28,8 +28,10 @@ automatically while all checks are green.
       exclusively controlled by the user.
 - [x] 8. Upgrade to schema v2 with Today markers, 24-hour completed retention,
       daily templates, and local-day instance rollover.
-- [ ] 9. Add the pinned Today column, inline calendar icon, daily-template
-      inspector controls, scheduler, full QA, and documentation.
+- [x] 9a. Add the pinned Today projection and inline calendar icon without
+      moving the manually controlled Miller viewport.
+- [ ] 9b. Add daily-template inspector controls, scheduler, full QA, and
+      documentation.
 
 ## Product constraints
 
@@ -50,5 +52,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 8 is complete. The next work is checkpoint 9: the pinned Today UI,
-daily-template controls, scheduler, and full integration QA.
+Checkpoint 9a is complete. The next work is checkpoint 9b: daily-template
+controls, scheduler, and full integration QA.

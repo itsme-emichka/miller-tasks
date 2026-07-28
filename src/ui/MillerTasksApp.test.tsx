@@ -38,6 +38,10 @@ describe("MillerTasksApp", () => {
     expect(container.querySelector(".miller-tasks-toolbar")).toBeNull();
     expect(container.querySelector(".miller-tasks-path")).toBeNull();
     expect(container.querySelector(".miller-tasks-inspector")).toBeNull();
+    expect(
+      screen.getByRole("region", { name: "Tasks for today" }),
+    ).toBeVisible();
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
     const title = screen.getByRole("button", { name: "Plain task" });
     expect(title.tagName).toBe("SPAN");
     expect(
@@ -45,6 +49,71 @@ describe("MillerTasksApp", () => {
         .closest(".miller-task-row")
         ?.querySelector(".task-list-item-checkbox"),
     ).toBeInstanceOf(HTMLInputElement);
+  });
+
+  it("adds a tree task to the pinned Today column from its row", () => {
+    const store = createStore();
+    store.createTask({ title: "Pin directly" });
+    const { container } = render(<MillerTasksApp store={store} />);
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+
+    expect(
+      within(today).queryByRole("button", { name: "Pin directly" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Add Pin directly to today",
+      }),
+    );
+
+    expect(
+      within(today).getByRole("button", { name: "Pin directly" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Remove Pin directly from today",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      container.querySelector(".miller-today-column")
+        ?.parentElement,
+    ).toBe(container.querySelector(".miller-tasks-workspace"));
+    expect(
+      container.querySelector(".miller-tasks-columns")?.parentElement,
+    ).toBe(container.querySelector(".miller-tasks-workspace"));
+  });
+
+  it("keeps Today and tree completion in sync", () => {
+    const store = createStore();
+    store.createTask({ title: "Shared task" });
+    render(<MillerTasksApp store={store} />);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Add Shared task to today",
+      }),
+    );
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+
+    fireEvent.click(
+      within(today).getByRole("checkbox", {
+        name: "Complete Shared task",
+      }),
+    );
+
+    const todayRow = within(today)
+      .getByRole("button", { name: "Shared task" })
+      .closest(".miller-task-row");
+    expect(todayRow).toHaveAttribute("data-completed", "true");
+    expect(
+      screen.queryByRole("button", {
+        name: "Remove Shared task from today",
+      }),
+    ).not.toBeInTheDocument();
+    expect(store.getTask("task-1")?.completed).toBe(true);
   });
 
   it("creates a task, selects it, and opens its child column", () => {
@@ -218,6 +287,10 @@ describe("MillerTasksApp", () => {
       const columns = container.querySelector<HTMLElement>(
         ".miller-tasks-columns",
       )!;
+      const today = container.querySelector<HTMLElement>(
+        ".miller-today-column",
+      )!;
+      expect(columns.contains(today)).toBe(false);
       columns.scrollLeft = 73;
 
       const parentTitle = screen.getByRole("button", {
