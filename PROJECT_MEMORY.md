@@ -524,3 +524,14 @@ horizontal viewport.
 - Moving deeper transfers the underline to the child and leaves every ancestor
   color-only; moving back transfers it to the new current node.
 - Completed current tasks retain line-through plus underline.
+
+## Checkpoint 10h verification
+
+- A Today task with `parentId` shows its direct parent's current title below
+  the task title.
+- Root tasks and generated daily instances keep the original one-line
+  presentation.
+- Parent context uses Obsidian's `--text-faint` and smaller interface type,
+  with single-line truncation for long titles.
+- The caption adds no icon, heading, card, alternate background, or new
+  interaction target.

@@ -93,7 +93,34 @@
 
 .miller-today-task-row {
   grid-template-columns: 1.4rem minmax(0, 1fr);
+  align-items: start;
+  padding-top: 0.18rem;
+  padding-bottom: 0.18rem;
   touch-action: auto;
+}
+
+.miller-today-task-row .miller-task-checkbox {
+  margin-top: 0.32rem;
+}
+
+.miller-today-task-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.miller-today-task-row .miller-task-title {
+  padding-bottom: 0.05rem;
+}
+
+.miller-today-parent {
+  min-width: 0;
+  padding: 0 0.4rem 0.16rem;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .miller-task-row[data-dragging="true"] {

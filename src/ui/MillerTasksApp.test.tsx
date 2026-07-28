@@ -186,6 +186,26 @@ describe("MillerTasksApp", () => {
     ).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("shows a quiet direct-parent label below a Today subtask", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Project parent" });
+    const child = store.createTask({
+      parentId: parent.id,
+      title: "Concrete step",
+    });
+    store.setTaskToday(child.id, true);
+    render(<MillerTasksApp store={store} />);
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+    const parentLabel = within(today).getByText("Project parent");
+
+    expect(parentLabel).toHaveClass("miller-today-parent");
+    expect(
+      within(today).getByRole("button", { name: "Concrete step" }),
+    ).toBeVisible();
+  });
+
   it("creates a task, selects it, and opens its child column", () => {
     const store = createStore();
     const { container } = render(<MillerTasksApp store={store} />);

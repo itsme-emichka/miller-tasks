@@ -16,6 +16,7 @@ Obsidian theme.
 - Navigate and reorganize a task tree up to 10 levels deep.
 - Render every task as a plain Obsidian checkbox-and-text line.
 - Add any tree task to the pinned Today column from its row calendar icon.
+- Show a subtask's direct parent as quiet context below its Today title.
 - Keep unfinished Today tasks across days and completed ones for 24 hours.
 - Define daily tasks that receive one fresh incomplete instance each local
   day.

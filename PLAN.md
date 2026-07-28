@@ -46,6 +46,7 @@ automatically while all checks are green.
       underlined task text.
 - [x] 10g. Underline only the current task while keeping its selected
       ancestors accent-colored without underlines.
+- [x] 10h. Show a subtle direct-parent caption below subtasks in Today.
 
 ## Product constraints
 
@@ -67,5 +68,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All requested checkpoint-10 interaction and active-path styling changes are
-complete.
+All requested checkpoint-10 interaction, path styling, and Today context
+changes are complete.

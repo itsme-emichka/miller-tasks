@@ -85,6 +85,13 @@ export function MillerTasksApp({
     () => store.getTodayTasks(now),
     [now, snapshot, store],
   );
+  const taskTitleById = useMemo(
+    () =>
+      new Map(
+        snapshot.tasks.map((task) => [task.id, task.title]),
+      ),
+    [snapshot],
+  );
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(
     null,
@@ -266,6 +273,11 @@ export function MillerTasksApp({
                 ) : null}
                 <TodayTaskRow
                   task={task}
+                  parentTitle={
+                    task.parentId === null
+                      ? null
+                      : taskTitleById.get(task.parentId) ?? null
+                  }
                   onSelect={() => onTaskSelected?.(task.id)}
                   onTaskCompletion={completeTask}
                   onDelete={() => onTaskDelete?.(task.id)}
@@ -317,6 +329,7 @@ export function MillerTasksApp({
 
 interface TodayTaskRowProps {
   task: TaskRecord;
+  parentTitle: string | null;
   onSelect: () => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
   onDelete: () => void;
@@ -324,6 +337,7 @@ interface TodayTaskRowProps {
 
 function TodayTaskRow({
   task,
+  parentTitle,
   onSelect,
   onTaskCompletion,
   onDelete,
@@ -356,18 +370,23 @@ function TodayTaskRow({
           onTaskCompletion(task.id, event.currentTarget.checked)
         }
       />
-      <span
-        className="miller-task-title"
-        role="button"
-        tabIndex={0}
-        onClick={(event) => {
-          event.currentTarget.focus({ preventScroll: true });
-          onSelect();
-        }}
-        onKeyDown={handleTitleKeyDown}
-      >
-        {task.title}
-      </span>
+      <div className="miller-today-task-copy">
+        <span
+          className="miller-task-title"
+          role="button"
+          tabIndex={0}
+          onClick={(event) => {
+            event.currentTarget.focus({ preventScroll: true });
+            onSelect();
+          }}
+          onKeyDown={handleTitleKeyDown}
+        >
+          {task.title}
+        </span>
+        {parentTitle ? (
+          <span className="miller-today-parent">{parentTitle}</span>
+        ) : null}
+      </div>
     </div>
   );
 }
