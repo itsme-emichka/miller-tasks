@@ -33,6 +33,11 @@ automatically while all checks are green.
 - [x] 9b. Add minimal daily-template controls to the native right-sidebar
       inspector.
 - [x] 9c. Add the rollover scheduler, run full QA, and finish documentation.
+- [x] 10a. Keep daily instances below ordinary Today tasks and separate the
+      two groups with a single theme-native hairline.
+- [ ] 10b. Project leaf descendants into Today and derive parent completion
+      from completed children.
+- [ ] 10c. Keep newly completed tree rows visible until the next local day.
 
 ## Product constraints
 
@@ -53,5 +58,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All planned checkpoints are complete. The current source build is the first
-prototype with Today projection and daily-task rollover.
+Checkpoint 10a is complete. The next work is recursive leaf projection and
+derived parent completion.

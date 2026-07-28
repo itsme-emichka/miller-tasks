@@ -115,10 +115,10 @@ export class TaskStore {
           );
         }
         if (left.dailyTemplateId !== null) {
-          return -1;
+          return 1;
         }
         if (right.dailyTemplateId !== null) {
-          return 1;
+          return -1;
         }
         return (
           (left.todayAddedAt ?? left.createdAt) -

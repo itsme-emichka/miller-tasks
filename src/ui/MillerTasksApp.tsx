@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -247,13 +248,22 @@ export function MillerTasksApp({
           aria-label="Tasks for today"
         >
           <div className="miller-tasks-list">
-            {todayTasks.map((task) => (
-              <TodayTaskRow
-                key={task.id}
-                task={task}
-                onSelect={() => onTaskSelected?.(task.id)}
-                onTaskCompletion={completeTask}
-              />
+            {todayTasks.map((task, index) => (
+              <Fragment key={task.id}>
+                {task.dailyTemplateId !== null &&
+                index > 0 &&
+                todayTasks[index - 1]?.dailyTemplateId === null ? (
+                  <div
+                    className="miller-today-divider"
+                    role="separator"
+                  />
+                ) : null}
+                <TodayTaskRow
+                  task={task}
+                  onSelect={() => onTaskSelected?.(task.id)}
+                  onTaskCompletion={completeTask}
+                />
+              </Fragment>
             ))}
             {todayTasks.length === 0 ? (
               <p className="miller-today-empty">No tasks for today</p>

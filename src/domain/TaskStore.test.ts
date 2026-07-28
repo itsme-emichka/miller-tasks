@@ -228,6 +228,19 @@ describe("TaskStore", () => {
     expect(store.getDailyTemplates()).toHaveLength(0);
     expect(store.getTodayTasks(now)).toHaveLength(0);
   });
+
+  it("places daily instances after ordinary Today tasks", () => {
+    const store = createStore();
+    const template = store.createDailyTemplate("Daily routine");
+    const daily = store.getTasksForDailyTemplate(template.id)[0]!;
+    const ordinary = store.createTask({ title: "Specific task" });
+    store.setTaskToday(ordinary.id, true);
+
+    expect(store.getTodayTasks().map((task) => task.id)).toEqual([
+      ordinary.id,
+      daily.id,
+    ]);
+  });
 });
 
 function expectTaskError(

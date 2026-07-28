@@ -116,6 +116,29 @@ describe("MillerTasksApp", () => {
     expect(store.getTask("task-1")?.completed).toBe(true);
   });
 
+  it("renders daily tasks below ordinary Today tasks with one divider", () => {
+    const store = createStore();
+    const template = store.createDailyTemplate("Daily routine");
+    const ordinary = store.createTask({ title: "Specific task" });
+    store.setTaskToday(ordinary.id, true);
+    render(<MillerTasksApp store={store} />);
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+    const rows = Array.from(
+      today.querySelectorAll<HTMLElement>(".miller-task-row"),
+    );
+    const divider = today.querySelector(".miller-today-divider");
+
+    expect(rows.map((row) => row.dataset.taskId)).toEqual([
+      ordinary.id,
+      store.getTasksForDailyTemplate(template.id)[0]!.id,
+    ]);
+    expect(divider).toHaveAttribute("role", "separator");
+    expect(divider?.previousElementSibling).toBe(rows[0]);
+    expect(divider?.nextElementSibling).toBe(rows[1]);
+  });
+
   it("creates a task, selects it, and opens its child column", () => {
     const store = createStore();
     const { container } = render(<MillerTasksApp store={store} />);

@@ -53,6 +53,12 @@
   font-size: var(--font-ui-small);
 }
 
+.miller-today-divider {
+  height: 1px;
+  margin: 0.35rem 0.75rem;
+  background: var(--background-modifier-border);
+}
+
 .miller-tasks-columns {
   display: flex;
   min-width: 0;

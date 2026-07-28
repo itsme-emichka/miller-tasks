@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 9 of 9 complete.
+- Checkpoint: 10a complete; 10b and 10c pending.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: user testing and issue-driven refinement.
+- Next work: recursive leaf projection and derived parent completion.
 
 The plugin loads and migrates validated schema-v1 or schema-v2 task data before
 registering views.
@@ -449,3 +449,11 @@ horizontal viewport.
   automated Obsidian screenshot was not captured because the running Obsidian
   instance did not expose its local debugging port and macOS denied assistive
   access; layout and no-autoscroll behavior remain covered by React tests.
+
+## Checkpoint 10a verification
+
+- Ordinary, explicitly selected Today tasks always render before generated
+  daily instances.
+- A single one-pixel Obsidian theme border separates the two groups only when
+  both are present; no new heading or label was added.
+- Domain ordering and rendered separator placement are covered by tests.
