@@ -39,6 +39,8 @@ columns, and the same background as the active Obsidian theme.
 - Keep the horizontal hierarchy full-height on phones and narrow desktop
   windows while Today rests in a bottom sheet that expands to 80% of the
   screen.
+- Keep the Today handle above Obsidian's mobile navigation bar and reserve
+  hierarchy swipes for Miller column scrolling instead of outer app gestures.
 - Hide completed Today tasks by default in compact mode and reveal them from
   one small disclosure inside the expanded sheet.
 

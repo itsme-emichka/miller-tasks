@@ -132,12 +132,23 @@ export function MillerTasksApp({
   );
   const [focusRequest, setFocusRequest] =
     useState<FocusRequest | null>(null);
+  const workspaceElement = useRef<HTMLDivElement | null>(null);
   const columnsElement = useRef<HTMLDivElement | null>(null);
   const todaySheetElement = useRef<HTMLElement | null>(null);
   const todaySheetHandleElement =
     useRef<HTMLButtonElement | null>(null);
   const todaySheetContentElement = useRef<HTMLDivElement | null>(null);
+  useNativeTouchGestureBoundary(
+    isCompact,
+    columnsElement,
+    false,
+  );
+  const mobileNavbarInset = useObsidianMobileNavbarInset(
+    isCompact,
+    workspaceElement,
+  );
   const todaySheetGesture = useTodaySheetGesture(
+    isCompact,
     todaySheetOpen,
     setTodaySheetOpen,
     todaySheetElement,
@@ -333,6 +344,14 @@ export function MillerTasksApp({
     });
   };
 
+  const stopCompactPointerGesture = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ): void => {
+    if (isCompact && event.pointerType === "touch") {
+      stopObsidianGesturePropagation(event);
+    }
+  };
+
   return (
     <main
       className="miller-tasks-shell"
@@ -342,7 +361,17 @@ export function MillerTasksApp({
         mode="columns"
         onToggleView={onToggleView}
       />
-      <div className="miller-tasks-workspace">
+      <div
+        ref={workspaceElement}
+        className="miller-tasks-workspace"
+        style={
+          mobileNavbarInset === null
+            ? undefined
+            : ({
+                "--miller-mobile-navbar-inset": `${mobileNavbarInset}px`,
+              } as CSSProperties)
+        }
+      >
         <section
           ref={todaySheetElement}
           className="miller-today-column miller-today-sheet"
@@ -462,6 +491,10 @@ export function MillerTasksApp({
             ref={columnsElement}
             className="miller-tasks-columns"
             aria-label="Task hierarchy columns"
+            onPointerDown={stopCompactPointerGesture}
+            onPointerMove={stopCompactPointerGesture}
+            onPointerUp={stopCompactPointerGesture}
+            onPointerCancel={stopCompactPointerGesture}
           >
             {columns.map((column, columnIndex) => (
               <TaskColumn
@@ -980,6 +1013,7 @@ interface TodaySheetGestureState {
 }
 
 function useTodaySheetGesture(
+  enabled: boolean,
   open: boolean,
   onOpenChange: (open: boolean) => void,
   sheetElement: RefObject<HTMLElement | null>,
@@ -989,6 +1023,7 @@ function useTodaySheetGesture(
   const [dragging, setDragging] = useState(false);
   const gesture = useRef<TodaySheetGestureState | null>(null);
   const suppressClick = useRef(false);
+  useNativeTouchGestureBoundary(enabled, handleElement, true);
 
   const finishGesture = (
     event: ReactPointerEvent<HTMLButtonElement>,
@@ -1008,17 +1043,21 @@ function useTodaySheetGesture(
     );
     let nextOpen = current.openAtStart;
 
-    if (!cancelled && current.moved) {
-      if (
-        displacement <= -threshold ||
-        velocity <= -TODAY_SHEET_FLICK_VELOCITY
-      ) {
-        nextOpen = true;
-      } else if (
-        displacement >= threshold ||
-        velocity >= TODAY_SHEET_FLICK_VELOCITY
-      ) {
-        nextOpen = false;
+    if (!cancelled) {
+      if (current.moved) {
+        if (
+          displacement <= -threshold ||
+          velocity <= -TODAY_SHEET_FLICK_VELOCITY
+        ) {
+          nextOpen = true;
+        } else if (
+          displacement >= threshold ||
+          velocity >= TODAY_SHEET_FLICK_VELOCITY
+        ) {
+          nextOpen = false;
+        }
+      } else {
+        nextOpen = !current.openAtStart;
       }
       suppressClick.current = true;
     }
@@ -1039,6 +1078,7 @@ function useTodaySheetGesture(
     dragging,
     handlers: {
       onPointerDown: (event) => {
+        stopObsidianGesture(event);
         if (event.button > 0 || event.isPrimary === false) {
           return;
         }
@@ -1061,6 +1101,7 @@ function useTodaySheetGesture(
         setDragging(true);
       },
       onPointerMove: (event) => {
+        stopObsidianGesture(event);
         const current = gesture.current;
         if (!current || current.pointerId !== event.pointerId) {
           return;
@@ -1077,19 +1118,254 @@ function useTodaySheetGesture(
             : Math.max(-current.travel, Math.min(0, displacement)),
         );
       },
-      onPointerUp: (event) => finishGesture(event, false),
-      onPointerCancel: (event) => finishGesture(event, true),
+      onPointerUp: (event) => {
+        stopObsidianGesture(event);
+        finishGesture(event, false);
+      },
+      onPointerCancel: (event) => {
+        stopObsidianGesture(event);
+        finishGesture(event, true);
+      },
       onClick: (event) => {
+        stopObsidianGesture(event);
         if (suppressClick.current) {
           suppressClick.current = false;
-          event.preventDefault();
-          event.stopPropagation();
           return;
         }
         onOpenChange(!open);
       },
     },
   };
+}
+
+const MOBILE_NAVBAR_GAP = 8;
+
+function useNativeTouchGestureBoundary<T extends HTMLElement>(
+  enabled: boolean,
+  elementRef: RefObject<T | null>,
+  preventDefault: boolean,
+): void {
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!enabled || !element) {
+      return;
+    }
+
+    const containTouchGesture = (event: TouchEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Node) || !element.contains(target)) {
+        return;
+      }
+      if (preventDefault) {
+        event.preventDefault();
+      }
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
+    const options = {
+      capture: true,
+      passive: !preventDefault,
+    } as const;
+    window.addEventListener(
+      "touchstart",
+      containTouchGesture,
+      options,
+    );
+    window.addEventListener(
+      "touchmove",
+      containTouchGesture,
+      options,
+    );
+    window.addEventListener(
+      "touchend",
+      containTouchGesture,
+      options,
+    );
+    window.addEventListener(
+      "touchcancel",
+      containTouchGesture,
+      options,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "touchstart",
+        containTouchGesture,
+        true,
+      );
+      window.removeEventListener(
+        "touchmove",
+        containTouchGesture,
+        true,
+      );
+      window.removeEventListener(
+        "touchend",
+        containTouchGesture,
+        true,
+      );
+      window.removeEventListener(
+        "touchcancel",
+        containTouchGesture,
+        true,
+      );
+    };
+  }, [elementRef, enabled, preventDefault]);
+}
+
+function useObsidianMobileNavbarInset(
+  enabled: boolean,
+  workspaceElement: RefObject<HTMLDivElement | null>,
+): number | null {
+  const [inset, setInset] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setInset(null);
+      return;
+    }
+
+    let animationFrame: number | null = null;
+    let observedNavbar: HTMLElement | null = null;
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => scheduleMeasurement());
+    const navbarObserver =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(() => scheduleMeasurement());
+
+    const observeNavbar = (navbar: HTMLElement | null): void => {
+      if (navbar === observedNavbar) {
+        return;
+      }
+      if (observedNavbar) {
+        resizeObserver?.unobserve(observedNavbar);
+      }
+      navbarObserver?.disconnect();
+      observedNavbar = navbar;
+      if (navbar) {
+        resizeObserver?.observe(navbar);
+        navbarObserver?.observe(navbar, {
+          attributes: true,
+          attributeFilter: ["class", "style"],
+        });
+      }
+    };
+
+    const measure = (): void => {
+      animationFrame = null;
+      const workspace = workspaceElement.current;
+      const navbar =
+        document.querySelector<HTMLElement>(".mobile-navbar");
+      observeNavbar(navbar);
+      if (!workspace || !navbar) {
+        setInset(null);
+        return;
+      }
+
+      const workspaceRect = workspace.getBoundingClientRect();
+      const navbarRect = navbar.getBoundingClientRect();
+      const horizontalOverlap =
+        Math.min(workspaceRect.right, navbarRect.right) -
+        Math.max(workspaceRect.left, navbarRect.left);
+      const verticalOverlap =
+        Math.min(workspaceRect.bottom, navbarRect.bottom) -
+        Math.max(workspaceRect.top, navbarRect.top);
+      if (
+        navbarRect.width <= 0 ||
+        navbarRect.height <= 0 ||
+        horizontalOverlap <= 0 ||
+        verticalOverlap <= 0
+      ) {
+        setInset(null);
+        return;
+      }
+
+      const nextInset = Math.min(
+        workspaceRect.height,
+        Math.max(
+          0,
+          workspaceRect.bottom -
+            navbarRect.top +
+            MOBILE_NAVBAR_GAP,
+        ),
+      );
+      setInset((current) =>
+        current === nextInset ? current : nextInset,
+      );
+    };
+
+    function scheduleMeasurement(): void {
+      if (animationFrame !== null) {
+        return;
+      }
+      if (typeof window.requestAnimationFrame !== "function") {
+        measure();
+        return;
+      }
+      animationFrame = window.requestAnimationFrame(measure);
+    }
+
+    const bodyObserver =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(() => scheduleMeasurement());
+    if (document.body) {
+      bodyObserver?.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
+    if (workspaceElement.current) {
+      resizeObserver?.observe(workspaceElement.current);
+    }
+    window.addEventListener("resize", scheduleMeasurement);
+    window.visualViewport?.addEventListener(
+      "resize",
+      scheduleMeasurement,
+    );
+    window.visualViewport?.addEventListener(
+      "scroll",
+      scheduleMeasurement,
+    );
+    measure();
+
+    return () => {
+      if (
+        animationFrame !== null &&
+        typeof window.cancelAnimationFrame === "function"
+      ) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      bodyObserver?.disconnect();
+      navbarObserver?.disconnect();
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleMeasurement);
+      window.visualViewport?.removeEventListener(
+        "resize",
+        scheduleMeasurement,
+      );
+      window.visualViewport?.removeEventListener(
+        "scroll",
+        scheduleMeasurement,
+      );
+    };
+  }, [enabled, workspaceElement]);
+
+  return inset;
+}
+
+function stopObsidianGesture(event: SyntheticEvent): void {
+  event.preventDefault();
+  stopObsidianGesturePropagation(event);
+}
+
+function stopObsidianGesturePropagation(
+  event: SyntheticEvent,
+): void {
+  event.stopPropagation();
+  event.nativeEvent.stopImmediatePropagation();
 }
 
 function useCompactLayout(): boolean {

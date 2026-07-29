@@ -791,22 +791,34 @@
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-tasks-workspace {
+  --miller-mobile-navbar-inset: 0px;
   position: relative;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
+}
+
+body.is-mobile
+  .miller-tasks-shell[data-compact="true"]
+  .miller-tasks-workspace {
+  --miller-mobile-navbar-inset: calc(
+    6rem + max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom))
+  );
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-today-column {
   --miller-today-sheet-drag: 0px;
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: var(--miller-mobile-navbar-inset);
   left: 0;
   z-index: 5;
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: min(80dvh, calc(100% - 0.5rem));
+  height: min(
+    80dvh,
+    calc(100% - var(--miller-mobile-navbar-inset) - 0.5rem)
+  );
   max-height: none;
   overflow: hidden;
   border-top: 1px solid var(--background-modifier-border);
@@ -927,19 +939,26 @@
   height: 100%;
   min-height: 0;
   scroll-snap-type: x proximity;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-tasks-column {
   overflow-y: auto;
-  scroll-padding-bottom: var(--miller-today-sheet-peek);
+  scroll-padding-bottom: calc(
+    var(--miller-today-sheet-peek) +
+      var(--miller-mobile-navbar-inset)
+  );
   scroll-snap-align: start;
 }
 
 .miller-tasks-shell[data-compact="true"]
   .miller-tasks-column
   .miller-tasks-list {
-  padding-bottom: var(--miller-today-sheet-peek);
+  padding-bottom: calc(
+    var(--miller-today-sheet-peek) +
+      var(--miller-mobile-navbar-inset)
+  );
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-task-row,

@@ -18,7 +18,8 @@ can resume without reconstructing architecture or product decisions.
   Undo/Redo, and 13e1 through 13e3 live replica persistence are complete.
   Checkpoint 13g1 validates the first physical Dropbox/Remotely Save
   macOS-to-iPhone matrix. Checkpoint 14a1 moves compact Today into a draggable
-  bottom sheet over full-height Miller columns.
+  bottom sheet over full-height Miller columns, and checkpoint 14a2 keeps that
+  sheet above Obsidian's navbar while containing mobile gestures.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -914,6 +915,30 @@ horizontal viewport.
 - Twenty-two focused `MillerTasksApp` tests pass, including tap state,
   swipe-up, swipe-down, full-workspace hierarchy structure, completed-task
   disclosure, and press-and-hold inspector behavior.
+
+## Checkpoint 14a2 mobile chrome and gesture containment
+
+- Physical iPhone screenshots showed the closed Today handle behind
+  Obsidian's floating `.mobile-navbar`. The compact workspace now measures the
+  navbar's real overlap and exposes it as `--miller-mobile-navbar-inset`; a
+  safe-area-aware CSS value protects the first frame and older mobile shells
+  where that element cannot be measured.
+- The Today sheet sits above that inset in both states. Its maximum height and
+  the hierarchy's bottom scroll padding use the same value, so the handle and
+  final task input remain reachable without hard-coding one iPhone model.
+- The handle owns its vertical pointer sequence. Non-passive native touch
+  guards plus React pointer containment prevent Obsidian's pull-down quick
+  action from receiving the gesture, while a no-movement pointer release still
+  behaves as a tap.
+- Compact hierarchy touch events stop at the Miller viewport without calling
+  `preventDefault()`. Native horizontal and vertical scrolling therefore
+  remain available while Obsidian's outer mobile sidebar gesture no longer
+  receives the same sequence.
+- Twenty-four focused `MillerTasksApp` tests pass. New regressions cover
+  measured navbar clearance, isolated Today pointer/touch gestures, isolated
+  hierarchy touch gestures, preserved native scrolling, and tap behavior
+  after pointer containment. The complete checkpoint verification passes 123
+  tests across 22 files plus lint, TypeScript, and the production build.
 
 ## Checkpoint 13c free replica transport revision
 

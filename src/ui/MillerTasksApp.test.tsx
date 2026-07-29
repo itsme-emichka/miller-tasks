@@ -1,5 +1,6 @@
 import {
   act,
+  createEvent,
   fireEvent,
   render,
   screen,
@@ -29,6 +30,25 @@ function createThroughInput(label: string, title: string): void {
   const input = screen.getByRole("textbox", { name: label });
   fireEvent.change(input, { target: { value: title } });
   fireEvent.submit(input.closest("form")!);
+}
+
+function createRect(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): DOMRect {
+  return {
+    x,
+    y,
+    width,
+    height,
+    top: y,
+    right: x + width,
+    bottom: y + height,
+    left: x,
+    toJSON: () => ({}),
+  };
 }
 
 afterEach(() => {
@@ -315,6 +335,109 @@ describe("MillerTasksApp", () => {
     expect(
       today.querySelector(".miller-today-sheet-content"),
     ).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("keeps the compact Today sheet above Obsidian's mobile navbar", () => {
+    const getBoundingClientRect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains("miller-tasks-workspace")) {
+          return createRect(0, 100, 375, 700);
+        }
+        if (this.classList.contains("mobile-navbar")) {
+          return createRect(0, 700, 375, 100);
+        }
+        return createRect(0, 0, 0, 0);
+      });
+
+    const { container, unmount } = render(
+      <>
+        <nav className="mobile-navbar" />
+        <MillerTasksApp store={createStore()} compactLayout />
+      </>,
+    );
+    const workspace = container.querySelector<HTMLElement>(
+      ".miller-tasks-workspace",
+    );
+
+    expect(
+      workspace?.style.getPropertyValue(
+        "--miller-mobile-navbar-inset",
+      ),
+    ).toBe("108px");
+
+    unmount();
+    getBoundingClientRect.mockRestore();
+  });
+
+  it("contains Today and hierarchy touch gestures inside the compact view", () => {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const pointerGesture = vi.fn();
+    const touchGesture = vi.fn();
+    const store = createStore();
+    const task = store.createTask({ title: "Gesture target" });
+    store.setTaskToday(task.id, true);
+    const { container } = render(
+      <div
+        onPointerDown={pointerGesture}
+        onPointerMove={pointerGesture}
+        onPointerUp={pointerGesture}
+        onTouchStart={touchGesture}
+        onTouchMove={touchGesture}
+        onTouchEnd={touchGesture}
+      >
+        <MillerTasksApp store={store} compactLayout />
+      </div>,
+    );
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+    const handle = within(today).getByRole("button", {
+      name: "Open Today, 1 open task",
+    });
+
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      isPrimary: true,
+      pointerId: 1,
+      clientY: 700,
+    });
+    fireEvent.pointerUp(handle, {
+      isPrimary: true,
+      pointerId: 1,
+      clientY: 700,
+    });
+    fireEvent.click(handle);
+
+    expect(today).toHaveAttribute("data-open", "true");
+    expect(pointerGesture).not.toHaveBeenCalled();
+
+    const handleTouchMove = createEvent.touchMove(handle, {
+      cancelable: true,
+      touches: [{ clientX: 180, clientY: 660 }],
+    });
+    fireEvent(handle, handleTouchMove);
+    expect(handleTouchMove.defaultPrevented).toBe(true);
+    expect(touchGesture).not.toHaveBeenCalled();
+
+    const columns = container.querySelector<HTMLElement>(
+      ".miller-tasks-columns",
+    );
+    expect(columns).not.toBeNull();
+    const columnTouchMove = createEvent.touchMove(columns!, {
+      cancelable: true,
+      touches: [{ clientX: 120, clientY: 300 }],
+    });
+    fireEvent.touchStart(columns!, {
+      touches: [{ clientX: 200, clientY: 300 }],
+    });
+    fireEvent(columns!, columnTouchMove);
+    fireEvent.touchEnd(columns!, {
+      changedTouches: [{ clientX: 120, clientY: 300 }],
+    });
+
+    expect(columnTouchMove.defaultPrevented).toBe(false);
+    expect(touchGesture).not.toHaveBeenCalled();
   });
 
   it("adds only recursive leaf descendants when a parent enters Today", () => {
