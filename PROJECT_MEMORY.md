@@ -624,3 +624,31 @@ horizontal viewport.
   Fit, and native manual scrolling move the tree presentation.
 - Sixty-two tests across thirteen files, lint, TypeScript, and the production
   build pass after the view-toggle and zoom additions.
+
+## Checkpoint 12 verification
+
+- `TaskStore` keeps at most 100 before/after snapshots in memory for the
+  current plugin session. History is deliberately absent from `PluginData`.
+- Undo/Redo covers task and daily-template creation, metadata edits,
+  completion cascades, Today projection, reorder, reparenting, and deletion
+  when no image file was moved to trash.
+- A new mutation after Undo clears the redo branch. Undo and redo both notify
+  every active view and enter the same sequential persistence queue as normal
+  changes.
+- `showCompleted` remains a presentation preference and is preserved across
+  task history restoration.
+- Daily rollover and image add/remove operations form safety barriers and
+  clear history. Deleting any subtree that owns images also clears history,
+  preventing restoration of task records whose files may already be in an
+  unrecoverable system trash location.
+- The command palette exposes `Undo last task change` and
+  `Redo last task change`.
+- Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, and Ctrl+Y work only while focus is inside a
+  Miller columns, Tree View, or task-inspector leaf. Text inputs, textareas,
+  selects, and content-editable elements retain their native editing history.
+- Selection is reconciled after restoration: missing tasks are deselected and
+  a recreated task can reopen in the existing inspector.
+- History is intentionally device-local and ephemeral, keeping the persisted
+  task model suitable for a later mobile synchronization design.
+- Seventy tests across fourteen files, lint, TypeScript, and the production
+  build pass.

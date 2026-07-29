@@ -81,6 +81,9 @@ plugins**.
 - Click a row to select it. Double-click it, or press F2, to rename it.
 - Press Delete or Backspace on a selected row to remove it immediately when
   it has no subtasks. A task with subtasks asks before deleting the subtree.
+- Press Cmd/Ctrl+Z while focus is inside Miller Tasks to undo the latest task
+  change. Use Cmd/Ctrl+Shift+Z or Ctrl+Y to redo it. Text inputs keep their
+  native character-level undo behavior.
 - Click the calendar-plus icon at the end of a tree row to add or remove that
   task from Today. The pinned copy is the same task, so its checkbox and
   metadata stay synchronized.
@@ -99,6 +102,8 @@ plugins**.
 - Run **Miller Tasks: Toggle completed tasks** to show or hide completed work.
 - Run **Miller Tasks: Delete selected task** to delete the selected subtree
   after confirmation.
+- **Miller Tasks: Undo last task change** and **Redo last task change** expose
+  the same history through the command palette.
 - Use **Delete task** in the right-sidebar inspector for the same behavior
   without returning focus to the task row.
 
@@ -108,6 +113,13 @@ remains struck through for 24 hours. At local midnight, every daily-task
 instance is removed and replaced with a new incomplete instance; an unfinished
 ordinary Today task carries forward. In the hierarchy itself, a newly
 completed row remains visible and struck through until the next local day.
+
+Undo/redo keeps up to 100 changes for the current plugin session, including
+creation, edits, completion, Today scheduling, moves, ordering, and safe
+deletion. The history is intentionally not stored in `data.json`, so it does
+not become shared task data. A plugin reload, daily rollover, or an image file
+operation starts a fresh history because Obsidian's trash cannot guarantee
+that an image can be restored to its original vault path.
 
 ## Data and files
 

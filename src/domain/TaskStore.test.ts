@@ -328,6 +328,112 @@ describe("TaskStore", () => {
     expect(store.getTask(parent.id)?.completed).toBe(false);
     expect(store.getTask(first.id)?.completed).toBe(true);
   });
+
+  it("undoes and redoes complete tree mutations in order", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Parent" });
+    const child = store.createTask({
+      parentId: parent.id,
+      title: "Child",
+    });
+    store.completeSubtree(child.id, true);
+    store.moveTask(child.id, null);
+    store.deleteSubtree(parent.id);
+
+    expect(store.getTask(parent.id)).toBeUndefined();
+    expect(store.undo()).toMatchObject({
+      label: "Delete “Parent”",
+      taskId: parent.id,
+    });
+    expect(store.getTask(parent.id)?.title).toBe("Parent");
+
+    expect(store.undo()?.label).toBe("Move “Child”");
+    expect(store.getTask(child.id)?.parentId).toBe(parent.id);
+
+    expect(store.undo()?.label).toBe("Complete “Child”");
+    expect(store.getTask(child.id)?.completed).toBe(false);
+    expect(store.getTask(parent.id)?.completed).toBe(false);
+
+    expect(store.redo()?.label).toBe("Complete “Child”");
+    expect(store.getTask(child.id)?.completed).toBe(true);
+    expect(store.getTask(parent.id)?.completed).toBe(true);
+    expect(store.redo()?.label).toBe("Move “Child”");
+    expect(store.getTask(child.id)?.parentId).toBeNull();
+  });
+
+  it("invalidates redo after a new edit", () => {
+    const store = createStore();
+    const task = store.createTask({ title: "First title" });
+    store.updateTask(task.id, { title: "Second title" });
+
+    store.undo();
+    expect(store.getTask(task.id)?.title).toBe("First title");
+    expect(store.canRedo()).toBe(true);
+
+    store.updateTask(task.id, { title: "Different title" });
+    expect(store.canRedo()).toBe(false);
+    expect(store.redo()).toBeNull();
+  });
+
+  it("keeps only the configured number of history entries", () => {
+    let id = 0;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `bounded-${++id}`,
+        now: () => id,
+        historyLimit: 2,
+      },
+    );
+    const first = store.createTask({ title: "First" });
+    const second = store.createTask({ title: "Second" });
+    const third = store.createTask({ title: "Third" });
+
+    expect(store.undo()?.taskId).toBe(third.id);
+    expect(store.undo()?.taskId).toBe(second.id);
+    expect(store.undo()).toBeNull();
+    expect(store.getTask(first.id)).toBeDefined();
+  });
+
+  it("preserves completed visibility across task undo", () => {
+    const store = createStore();
+    const task = store.createTask({ title: "Temporary" });
+    store.setShowCompleted(true);
+
+    expect(store.undo()?.taskId).toBe(task.id);
+    expect(store.getTask(task.id)).toBeUndefined();
+    expect(store.getSnapshot().showCompleted).toBe(true);
+  });
+
+  it("clears unsafe history when image files or rollover change", () => {
+    const store = createStore();
+    const task = store.createTask({ title: "With image" });
+    store.addAttachment(task.id, {
+      id: "attachment-1",
+      path: "Miller Tasks/Attachments/task-1/image.png",
+      name: "image.png",
+      mimeType: "image/png",
+      createdAt: 1_000,
+    });
+
+    expect(store.canUndo()).toBe(false);
+    store.updateTask(task.id, { description: "New history" });
+    expect(store.canUndo()).toBe(true);
+    store.deleteSubtree(task.id);
+    expect(store.canUndo()).toBe(false);
+
+    const template = store.createDailyTemplate("Daily");
+    expect(store.canUndo()).toBe(true);
+    const instance = store.getTasksForDailyTemplate(template.id)[0]!;
+    store.rollover(
+      new Date(
+        `${instance.generatedForDate}T00:00:00`,
+      ).getTime() +
+        24 * 60 * 60 * 1_000,
+    );
+    expect(store.canUndo()).toBe(false);
+  });
 });
 
 function expectTaskError(

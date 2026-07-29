@@ -65,5 +65,19 @@ describe("TaskPersistence", () => {
       title: "Persisted",
       description: "Saved in order",
     });
+
+    store.undo();
+    await store.flush();
+    expect(
+      new TaskStore(await persistence.load()).getTask(created.id)
+        ?.description,
+    ).toBe("");
+
+    store.redo();
+    await store.flush();
+    expect(
+      new TaskStore(await persistence.load()).getTask(created.id)
+        ?.description,
+    ).toBe("Saved in order");
   });
 });

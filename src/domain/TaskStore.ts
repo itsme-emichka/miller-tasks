@@ -31,15 +31,42 @@ type PersistenceErrorListener = (error: unknown) => void;
 interface TaskStoreOptions {
   idFactory?: () => string;
   now?: () => number;
+  historyLimit?: number;
 }
+
+type HistoryMode = "record" | "preserve" | "reset";
+
+interface HistoryChange {
+  label: string;
+  taskId: string | null;
+  mode?: HistoryMode;
+}
+
+interface HistoryEntry {
+  before: PluginData;
+  after: PluginData;
+  label: string;
+  taskId: string | null;
+}
+
+export interface TaskHistoryResult {
+  label: string;
+  taskId: string | null;
+}
+
+const DEFAULT_HISTORY_LIMIT = 100;
 
 export class TaskStore {
   private data: PluginData;
+  private historyBaseline: PluginData;
+  private readonly undoStack: HistoryEntry[] = [];
+  private readonly redoStack: HistoryEntry[] = [];
   private readonly listeners = new Set<StoreListener>();
   private readonly errorListeners =
     new Set<PersistenceErrorListener>();
   private readonly idFactory: () => string;
   private readonly now: () => number;
+  private readonly historyLimit: number;
 
   constructor(
     data: PluginData,
@@ -47,12 +74,53 @@ export class TaskStore {
     options: TaskStoreOptions = {},
   ) {
     this.data = parsePluginData(data);
+    this.historyBaseline = clonePluginData(this.data);
     this.idFactory = options.idFactory ?? (() => crypto.randomUUID());
     this.now = options.now ?? (() => Date.now());
+    this.historyLimit = Math.max(
+      0,
+      Math.floor(options.historyLimit ?? DEFAULT_HISTORY_LIMIT),
+    );
   }
 
   getSnapshot(): PluginData {
     return clonePluginData(this.data);
+  }
+
+  canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+
+  canRedo(): boolean {
+    return this.redoStack.length > 0;
+  }
+
+  undo(): TaskHistoryResult | null {
+    const entry = this.undoStack.pop();
+    if (!entry) {
+      return null;
+    }
+
+    this.redoStack.push(entry);
+    this.restoreHistorySnapshot(entry.before);
+    return {
+      label: entry.label,
+      taskId: entry.taskId,
+    };
+  }
+
+  redo(): TaskHistoryResult | null {
+    const entry = this.redoStack.pop();
+    if (!entry) {
+      return null;
+    }
+
+    this.undoStack.push(entry);
+    this.restoreHistorySnapshot(entry.after);
+    return {
+      label: entry.label,
+      taskId: entry.taskId,
+    };
   }
 
   getTask(id: string): TaskRecord | undefined {
@@ -206,7 +274,10 @@ export class TaskStore {
 
     this.data.tasks.push(task);
     this.syncAncestorCompletion(parentId, timestamp);
-    this.commit();
+    this.commit({
+      label: `Create “${task.title}”`,
+      taskId: task.id,
+    });
     return cloneTask(task);
   }
 
@@ -244,7 +315,10 @@ export class TaskStore {
     task.dueTime = dueTime;
     task.updatedAt = this.now();
 
-    this.commit();
+    this.commit({
+      label: `Edit “${task.title}”`,
+      taskId: task.id,
+    });
     return cloneTask(task);
   }
 
@@ -263,7 +337,10 @@ export class TaskStore {
     }
     this.syncAncestorCompletion(target.parentId, timestamp);
 
-    this.commit();
+    this.commit({
+      label: `${completed ? "Complete" : "Reopen"} “${target.title}”`,
+      taskId: target.id,
+    });
     return affectedIds;
   }
 
@@ -280,7 +357,13 @@ export class TaskStore {
     );
     this.normalizeSiblings(parentId);
     this.syncAncestorCompletion(parentId, this.now());
-    this.commit();
+    this.commit({
+      label: `Delete “${task.title}”`,
+      taskId: task.id,
+      mode: removed.some((candidate) => candidate.attachments.length > 0)
+        ? "reset"
+        : "record",
+    });
     return removed;
   }
 
@@ -346,7 +429,10 @@ export class TaskStore {
     if (newParentId !== oldParentId) {
       this.syncAncestorCompletion(newParentId, timestamp);
     }
-    this.commit();
+    this.commit({
+      label: `Move “${task.title}”`,
+      taskId: task.id,
+    });
     return cloneTask(task);
   }
 
@@ -380,7 +466,11 @@ export class TaskStore {
 
     task.attachments.push(normalized);
     task.updatedAt = this.now();
-    this.commit();
+    this.commit({
+      label: `Add image to “${task.title}”`,
+      taskId: task.id,
+      mode: "reset",
+    });
     return cloneTask(task);
   }
 
@@ -407,7 +497,11 @@ export class TaskStore {
       );
     }
     task.updatedAt = this.now();
-    this.commit();
+    this.commit({
+      label: `Remove image from “${task.title}”`,
+      taskId: task.id,
+      mode: "reset",
+    });
     return { ...removed };
   }
 
@@ -416,7 +510,11 @@ export class TaskStore {
       return;
     }
     this.data.showCompleted = showCompleted;
-    this.commit();
+    this.commit({
+      label: "Toggle completed tasks",
+      taskId: null,
+      mode: "preserve",
+    });
   }
 
   isTaskScheduledForToday(id: string): boolean {
@@ -452,7 +550,12 @@ export class TaskStore {
     }
 
     if (changed) {
-      this.commit();
+      this.commit({
+        label: `${today ? "Add" : "Remove"} “${task.title}” ${
+          today ? "to" : "from"
+        } Today`,
+        taskId: task.id,
+      });
     }
     return [...leafIds].map((taskId) =>
       cloneTask(this.requireTask(taskId)),
@@ -469,12 +572,15 @@ export class TaskStore {
       updatedAt: timestamp,
     };
     this.data.dailyTemplates.push(template);
-    this.createDailyInstance(
+    const instance = this.createDailyInstance(
       template,
       formatLocalDate(timestamp),
       timestamp,
     );
-    this.commit();
+    this.commit({
+      label: `Create daily task “${template.title}”`,
+      taskId: instance.id,
+    });
     return { ...template };
   }
 
@@ -493,12 +599,19 @@ export class TaskStore {
         task.updatedAt = timestamp;
       }
     }
-    this.commit();
+    this.commit({
+      label: `Rename daily task to “${template.title}”`,
+      taskId:
+        this.data.tasks.find(
+          (task) => task.dailyTemplateId === template.id,
+        )?.id ?? null,
+    });
     return { ...template };
   }
 
   deleteDailyTemplate(id: string): TaskRecord[] {
-    this.requireDailyTemplate(id);
+    const template = this.requireDailyTemplate(id);
+    const title = template.title;
     const removed = this.getTasksForDailyTemplate(id);
     this.data.dailyTemplates = this.data.dailyTemplates.filter(
       (template) => template.id !== id,
@@ -509,7 +622,10 @@ export class TaskStore {
     this.data.tasks = this.data.tasks.filter(
       (task) => task.dailyTemplateId !== id,
     );
-    this.commit();
+    this.commit({
+      label: `Delete daily task “${title}”`,
+      taskId: removed[0]?.id ?? null,
+    });
     return removed;
   }
 
@@ -568,7 +684,11 @@ export class TaskStore {
       clearedToday.length > 0 ||
       created.length > 0
     ) {
-      this.commit();
+      this.commit({
+        label: "Run daily rollover",
+        taskId: null,
+        mode: "reset",
+      });
     }
     return { created, removed, clearedToday };
   }
@@ -686,7 +806,39 @@ export class TaskStore {
     });
   }
 
-  private commit(): void {
+  private commit(change: HistoryChange): void {
+    const after = clonePluginData(this.data);
+    const mode = change.mode ?? "record";
+
+    if (mode === "record" && this.historyLimit > 0) {
+      this.undoStack.push({
+        before: this.historyBaseline,
+        after,
+        label: change.label,
+        taskId: change.taskId,
+      });
+      if (this.undoStack.length > this.historyLimit) {
+        this.undoStack.shift();
+      }
+      this.redoStack.length = 0;
+    } else if (mode === "reset") {
+      this.undoStack.length = 0;
+      this.redoStack.length = 0;
+    }
+
+    this.historyBaseline = after;
+    this.notifyAndPersist();
+  }
+
+  private restoreHistorySnapshot(snapshot: PluginData): void {
+    const showCompleted = this.data.showCompleted;
+    this.data = clonePluginData(snapshot);
+    this.data.showCompleted = showCompleted;
+    this.historyBaseline = clonePluginData(this.data);
+    this.notifyAndPersist();
+  }
+
+  private notifyAndPersist(): void {
     for (const listener of this.listeners) {
       listener();
     }

@@ -15,6 +15,11 @@ import {
   TASK_ROLLOVER_INTERVAL_MS,
 } from "./state/runTaskRollover";
 import { TaskAttachment } from "./domain/task";
+import {
+  isTaskViewTarget,
+  isTextEditingTarget,
+  resolveTaskHistoryShortcut,
+} from "./ui/taskHistoryShortcuts";
 import { requestConfirmation } from "./view/ConfirmationModal";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
 import { MillerTaskTreeView } from "./view/MillerTaskTreeView";
@@ -206,6 +211,56 @@ export default class MillerTasksPlugin extends Plugin {
         void this.deleteSelectedTask();
       },
     });
+
+    this.addCommand({
+      id: "undo-task-change",
+      name: "Undo last task change",
+      checkCallback: (checking) => {
+        if (!taskStore.canUndo()) {
+          return false;
+        }
+        if (!checking) {
+          this.undoTaskChange();
+        }
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "redo-task-change",
+      name: "Redo last task change",
+      checkCallback: (checking) => {
+        if (!taskStore.canRedo()) {
+          return false;
+        }
+        if (!checking) {
+          this.redoTaskChange();
+        }
+        return true;
+      },
+    });
+
+    this.registerDomEvent(document, "keydown", (event) => {
+      if (
+        !isTaskViewTarget(event.target) ||
+        isTextEditingTarget(event.target)
+      ) {
+        return;
+      }
+
+      const shortcut = resolveTaskHistoryShortcut(event);
+      if (shortcut === null) {
+        return;
+      }
+      const handled =
+        shortcut === "undo"
+          ? this.undoTaskChange()
+          : this.redoTaskChange();
+      if (handled) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
   }
 
   override onunload(): void {
@@ -217,6 +272,56 @@ export default class MillerTasksPlugin extends Plugin {
     this.taskDrafts?.flushAll();
     this.taskSelection.setSelectedTaskId(taskId);
     if (taskId !== null) {
+      void this.activateInspector();
+    }
+  }
+
+  private undoTaskChange(): boolean {
+    this.taskDrafts?.flushAll();
+    const result = this.taskStore?.undo();
+    if (!result) {
+      return false;
+    }
+
+    this.reconcileSelectionAfterHistory(result.taskId);
+    new Notice(`Undo: ${result.label}`);
+    return true;
+  }
+
+  private redoTaskChange(): boolean {
+    this.taskDrafts?.flushAll();
+    const result = this.taskStore?.redo();
+    if (!result) {
+      return false;
+    }
+
+    this.reconcileSelectionAfterHistory(result.taskId);
+    new Notice(`Redo: ${result.label}`);
+    return true;
+  }
+
+  private reconcileSelectionAfterHistory(
+    historyTaskId: string | null,
+  ): void {
+    const taskStore = this.taskStore;
+    if (!taskStore) {
+      return;
+    }
+
+    const selectedTaskId = this.taskSelection.getSelectedTaskId();
+    if (
+      selectedTaskId !== null &&
+      !taskStore.getTask(selectedTaskId)
+    ) {
+      this.taskSelection.setSelectedTaskId(null);
+      return;
+    }
+    if (
+      selectedTaskId === null &&
+      historyTaskId !== null &&
+      taskStore.getTask(historyTaskId)
+    ) {
+      this.taskSelection.setSelectedTaskId(historyTaskId);
       void this.activateInspector();
     }
   }
