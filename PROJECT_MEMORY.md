@@ -22,7 +22,8 @@ can resume without reconstructing architecture or product decisions.
   sheet above Obsidian's navbar while containing mobile gestures. Checkpoint
   14a3 replaces single-line ellipsis with growing multi-line task rows, and
   checkpoint 14a4 constrains the compact inspector to the mobile safe area.
-  Checkpoint 14a5 adds the Today completed-task disclosure on desktop.
+  Checkpoint 14a5 adds the Today completed-task disclosure on desktop, and
+  checkpoint 14a6 exposes daily-template editing inside compact Today.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -1175,3 +1176,19 @@ horizontal viewport.
   the arrow remains reachable at the bottom of the pinned column. One focused
   regression verifies both collapse and re-expansion semantics without
   changing task completion data.
+
+## Checkpoint 14a6 compact daily-task editor
+
+- Expanded compact Today begins with one quiet `Edit daily tasks` disclosure.
+  Opening it reveals the existing `DailyTasksEditor` above the Today list, so
+  phone users can create, rename, and delete templates without opening the
+  unrelated task-details form.
+- The editor reuses the live task snapshot and the same confirmed-delete
+  action as the desktop inspector. Template changes therefore update today's
+  generated occurrence immediately and retain the existing Undo/Redo,
+  persistence, and synchronization semantics.
+- The editor stays inside Today's independently scrolling sheet and collapses
+  to one line when not in use. It does not appear in desktop Today because the
+  right-sidebar editor remains available there.
+- One focused regression covers disclosure state, create, rename, Today-title
+  propagation, and delegated delete behavior.

@@ -46,6 +46,8 @@ import {
   TaskDropData,
   TaskDropPlacement,
 } from "./taskDrop";
+import { DailyTasksEditor } from "./DailyTasksEditor";
+import type { DailyTemplateActions } from "./dailyTemplateActions";
 import { MillerViewHeader } from "./MillerViewHeader";
 
 interface MillerTasksAppProps {
@@ -60,6 +62,7 @@ interface MillerTasksAppProps {
   onTaskCompletion?: (taskId: string, completed: boolean) => void;
   onTaskDelete?: (taskId: string) => void;
   onTaskMoveError?: (message: string) => void;
+  dailyTemplateActions?: DailyTemplateActions;
   clock?: () => number;
   compactLayout?: boolean;
 }
@@ -94,6 +97,7 @@ export function MillerTasksApp({
   onTaskCompletion,
   onTaskDelete,
   onTaskMoveError,
+  dailyTemplateActions,
   clock = Date.now,
   compactLayout,
 }: MillerTasksAppProps): JSX.Element {
@@ -109,6 +113,7 @@ export function MillerTasksApp({
     !isCompact,
   );
   const [todaySheetOpen, setTodaySheetOpen] = useState(false);
+  const [dailyEditorOpen, setDailyEditorOpen] = useState(false);
   const completedTodayCount = useMemo(
     () => todayTasks.filter((task) => task.completed).length,
     [todayTasks],
@@ -171,6 +176,7 @@ export function MillerTasksApp({
     setShowCompletedToday(!isCompact);
     if (!isCompact) {
       setTodaySheetOpen(false);
+      setDailyEditorOpen(false);
     }
   }, [isCompact]);
 
@@ -425,6 +431,34 @@ export function MillerTasksApp({
             className="miller-today-sheet-content"
             aria-hidden={isCompact && !todaySheetOpen}
           >
+            {isCompact ? (
+              <div
+                className="miller-compact-daily-editor"
+                data-expanded={dailyEditorOpen}
+              >
+                <button
+                  type="button"
+                  className="miller-compact-daily-editor-toggle"
+                  aria-controls="miller-compact-daily-editor-content"
+                  aria-expanded={dailyEditorOpen}
+                  onClick={() =>
+                    setDailyEditorOpen((current) => !current)
+                  }
+                >
+                  <span>Edit daily tasks</span>
+                  <ChevronIcon />
+                </button>
+                {dailyEditorOpen ? (
+                  <div id="miller-compact-daily-editor-content">
+                    <DailyTasksEditor
+                      store={store}
+                      templates={snapshot.dailyTemplates}
+                      actions={dailyTemplateActions}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div className="miller-tasks-list">
               {visibleTodayTasks.map((task, index) => (
                 <Fragment key={task.id}>

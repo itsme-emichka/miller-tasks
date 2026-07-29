@@ -304,6 +304,68 @@ describe("MillerTasksApp", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("edits daily tasks inside the compact Today sheet", () => {
+    const store = createStore();
+    const template = store.createDailyTemplate("Morning review");
+    const deleteTemplate = vi.fn(async (templateId: string) => {
+      store.deleteDailyTemplate(templateId);
+    });
+    render(
+      <MillerTasksApp
+        store={store}
+        compactLayout
+        dailyTemplateActions={{ deleteTemplate }}
+      />,
+    );
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+    fireEvent.click(
+      within(today).getByRole("button", {
+        name: "Open Today, 1 open task",
+      }),
+    );
+    const editDailyTasks = within(today).getByRole("button", {
+      name: "Edit daily tasks",
+    });
+
+    expect(editDailyTasks).toHaveAttribute("aria-expanded", "false");
+    expect(
+      within(today).queryByRole("region", { name: "Daily tasks" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(editDailyTasks);
+
+    expect(editDailyTasks).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(today).getByRole("region", { name: "Daily tasks" }),
+    ).toBeVisible();
+    const templateTitle = within(today).getByRole("textbox", {
+      name: "Daily task Morning review",
+    });
+    fireEvent.change(templateTitle, {
+      target: { value: "Morning plan" },
+    });
+    fireEvent.blur(templateTitle);
+    expect(store.getDailyTemplates()[0]?.title).toBe("Morning plan");
+    expect(
+      within(today).getByRole("button", { name: "Morning plan" }),
+    ).toBeVisible();
+
+    createThroughInput("New daily task", "Evening review");
+    expect(store.getDailyTemplates()).toHaveLength(2);
+    fireEvent.click(
+      within(today).getByRole("button", {
+        name: "Delete daily task Morning plan",
+      }),
+    );
+
+    expect(deleteTemplate).toHaveBeenCalledWith(
+      template.id,
+      "Morning plan",
+    );
+    expect(store.getDailyTemplates()).toHaveLength(1);
+  });
+
   it("opens and closes the compact Today sheet by swipe", () => {
     vi.stubGlobal("PointerEvent", MouseEvent);
     const store = createStore();

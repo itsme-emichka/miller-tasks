@@ -952,6 +952,72 @@ body.is-mobile
   min-height: 0;
 }
 
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor {
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 2.4rem;
+  margin: 0;
+  padding: 0.45rem 1rem;
+  border: 0;
+  border-radius: 0;
+  color: var(--text-muted);
+  background: var(--background-primary);
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--font-ui-smaller);
+  text-align: left;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor-toggle:hover,
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor-toggle:focus-visible {
+  color: var(--interactive-accent);
+  background: var(--background-primary);
+  box-shadow: none;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor-toggle:focus-visible {
+  outline: 1px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor-toggle
+  svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  transition: transform 140ms ease;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor[data-expanded="true"]
+  .miller-compact-daily-editor-toggle
+  svg {
+  transform: rotate(180deg);
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-compact-daily-editor
+  .miller-daily-templates {
+  padding: 0.75rem 1rem 0.9rem;
+}
+
 .miller-tasks-shell[data-compact="true"] .miller-tasks-columns {
   width: 100%;
   height: 100%;
@@ -1046,6 +1112,7 @@ body.is-mobile .miller-task-inspector-modal .modal-content {
 @media (prefers-reduced-motion: reduce) {
   .miller-task-row,
   .miller-today-completed-toggle svg,
+  .miller-compact-daily-editor-toggle svg,
   .miller-today-column {
     transition: none !important;
   }

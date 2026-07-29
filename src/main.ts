@@ -175,6 +175,7 @@ export default class MillerTasksPlugin extends Plugin {
             reportMoveError: (message) => {
               new Notice(message);
             },
+            dailyTemplateActions: inspectorActions.dailyTemplates,
           },
         ),
     );

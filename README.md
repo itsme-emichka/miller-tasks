@@ -141,8 +141,9 @@ plugins**.
   Miller columns.
 - Edit metadata in the right sidebar. Text saves after 400 ms and immediately
   on blur or task change.
-- Create and rename daily tasks in the **Daily tasks** section of the right
-  sidebar. Deleting a daily task asks for confirmation.
+- Create and rename daily tasks in the **Daily tasks** section of the desktop
+  right sidebar, or open **Today → Edit daily tasks** in compact mode.
+  Deleting a daily task asks for confirmation.
 - Paste images while the inspector is active, or drop them on the Images area.
 - Run **Miller Tasks: Toggle completed tasks** to show or hide completed work.
 - Run **Miller Tasks: Delete selected task** to delete the selected subtree

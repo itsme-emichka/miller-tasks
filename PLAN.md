@@ -100,6 +100,8 @@ automatically while all checks are green.
 - [x] 14a5. Add the completed-task disclosure to desktop Today, initially
       expanded there while preserving compact Today's initially collapsed
       behavior.
+- [x] 14a6. Add a compact daily-task editor disclosure at the top of the
+      expanded Today sheet with create, rename, and confirmed delete support.
 - [x] 14b. Publish an installable `0.1.0` GitHub beta release with the three
       Obsidian assets so the mobile build can be installed through BRAT.
 - [x] 14b1. Publish the replica-synchronization beta as GitHub prerelease
