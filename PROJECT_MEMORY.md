@@ -20,7 +20,8 @@ can resume without reconstructing architecture or product decisions.
   macOS-to-iPhone matrix. Checkpoint 14a1 moves compact Today into a draggable
   bottom sheet over full-height Miller columns, and checkpoint 14a2 keeps that
   sheet above Obsidian's navbar while containing mobile gestures. Checkpoint
-  14a3 replaces single-line ellipsis with growing multi-line task rows.
+  14a3 replaces single-line ellipsis with growing multi-line task rows, and
+  checkpoint 14a4 constrains the compact inspector to the mobile safe area.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -1148,3 +1149,15 @@ horizontal viewport.
   one-line node geometry until tree measurement supports variable heights.
 - This checkpoint changes presentation only; task titles, selection,
   drag-and-drop, persistence, and synchronization data are unchanged.
+
+## Checkpoint 14a4 safe-area compact inspector
+
+- The mobile task-detail modal subtracts the larger of Obsidian's safe-area
+  variables, the browser environment insets, and a small visual margin from
+  every viewport edge.
+- The modal itself has a bounded dynamic-viewport height. Its content owns
+  vertical scrolling with momentum and overscroll containment, so the title
+  bar and close control remain reachable even when the task form is taller
+  than the available iPhone screen or the software keyboard changes it.
+- Desktop sidebar and modal sizing are unchanged. This checkpoint changes no
+  task fields, drafts, attachments, or synchronized data.
