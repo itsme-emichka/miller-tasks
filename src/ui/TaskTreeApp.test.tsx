@@ -15,6 +15,28 @@ function createStore(): TaskStore {
 }
 
 describe("TaskTreeApp", () => {
+  it("switches back to columns from the icon left of the heading", () => {
+    const toggleView = vi.fn();
+    const { container } = render(
+      <TaskTreeApp
+        store={createStore()}
+        selection={new TaskSelection()}
+        onToggleView={toggleView}
+      />,
+    );
+    const header = container.querySelector(".miller-view-header");
+    const toggle = screen.getByRole("button", {
+      name: "Show Miller columns",
+    });
+
+    expect(header?.firstElementChild).toBe(toggle);
+    expect(toggle.nextElementSibling).toBe(
+      screen.getByRole("heading", { name: "Miller Tasks" }),
+    );
+    fireEvent.click(toggle);
+    expect(toggleView).toHaveBeenCalledOnce();
+  });
+
   it("renders the full hierarchy with parents above children", () => {
     const store = createStore();
     const parent = store.createTask({ title: "Parent" });

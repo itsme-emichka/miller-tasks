@@ -9,10 +9,12 @@ import {
   layoutTaskTree,
   TaskTreeLayoutEdge,
 } from "./taskTreeLayout";
+import { MillerViewHeader } from "./MillerViewHeader";
 
 interface TaskTreeAppProps {
   store: TaskStore;
   selection: TaskSelection;
+  onToggleView?: () => void;
   onTaskSelected?: (taskId: string) => void;
   onTaskCompletion?: (taskId: string, completed: boolean) => void;
   onTaskDelete?: (taskId: string) => void;
@@ -21,6 +23,7 @@ interface TaskTreeAppProps {
 export function TaskTreeApp({
   store,
   selection,
+  onToggleView,
   onTaskSelected,
   onTaskCompletion,
   onTaskDelete,
@@ -39,7 +42,7 @@ export function TaskTreeApp({
 
   return (
     <main className="miller-task-tree-shell">
-      <h1>Miller Tasks</h1>
+      <MillerViewHeader mode="tree" onToggleView={onToggleView} />
       <div
         className="miller-task-tree-viewport"
         aria-label="Task tree"

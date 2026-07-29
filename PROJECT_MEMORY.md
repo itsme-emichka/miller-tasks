@@ -597,3 +597,14 @@ horizontal viewport.
   native scrollbars retain full viewport control.
 - Fifty-eight tests across thirteen files, lint, TypeScript, and the production
   build pass.
+
+## Checkpoint 11c verification
+
+- One icon sits immediately left of the shared `Miller Tasks` heading in both
+  presentation modes.
+- The icon replaces the current Obsidian leaf view in place: columns switch to
+  Tree View and Tree View switches back to columns without opening another tab.
+- The separate Tree View ribbon action was removed; the existing command
+  palette action remains available for direct opening.
+- The toggle inherits Obsidian colors and focus treatment without introducing
+  a separate toolbar, card, or alternate background.

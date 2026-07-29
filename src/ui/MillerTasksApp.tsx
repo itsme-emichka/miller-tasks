@@ -42,9 +42,11 @@ import {
   TaskDropData,
   TaskDropPlacement,
 } from "./taskDrop";
+import { MillerViewHeader } from "./MillerViewHeader";
 
 interface MillerTasksAppProps {
   store: TaskStore;
+  onToggleView?: () => void;
   onTaskSelected?: (taskId: string | null) => void;
   onTaskCompletion?: (taskId: string, completed: boolean) => void;
   onTaskDelete?: (taskId: string) => void;
@@ -73,6 +75,7 @@ interface FocusRequest {
 
 export function MillerTasksApp({
   store,
+  onToggleView,
   onTaskSelected,
   onTaskCompletion,
   onTaskDelete,
@@ -254,7 +257,10 @@ export function MillerTasksApp({
 
   return (
     <main className="miller-tasks-shell">
-      <h1>Miller Tasks</h1>
+      <MillerViewHeader
+        mode="columns"
+        onToggleView={onToggleView}
+      />
       <div className="miller-tasks-workspace">
         <section
           className="miller-today-column"

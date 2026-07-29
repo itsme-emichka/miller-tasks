@@ -33,18 +33,66 @@
   background: var(--background-primary);
 }
 
-.miller-tasks-shell h1,
-.miller-task-tree-shell h1 {
+.miller-view-header {
+  display: flex;
+  align-items: center;
   min-height: 3.5rem;
   margin: 0;
-  padding: 1rem 1.25rem;
+  padding: 0 0.75rem;
   border-bottom: 1px solid var(--background-modifier-border);
   color: var(--text-normal);
   background: var(--background-primary);
+}
+
+.miller-view-header h1 {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem 0.5rem;
   font-family: var(--font-interface);
   font-size: 1.15rem;
   font-weight: var(--font-semibold);
   letter-spacing: -0.02em;
+}
+
+.miller-view-toggle {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0.3rem;
+  border: 0;
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+.miller-view-toggle:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.miller-view-toggle:focus-visible {
+  color: var(--interactive-accent);
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.miller-view-toggle svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
+}
+
+.miller-view-header-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
 }
 
 .miller-task-tree-viewport {

@@ -52,6 +52,9 @@ automatically while all checks are green.
 - [x] 11a. Add a deterministic top-down layout engine for the complete task
       forest.
 - [x] 11b. Build and register the interactive structured Tree View.
+- [x] 11c. Add one icon beside the shared heading that switches the current
+      Obsidian leaf between Miller columns and Tree View.
+- [ ] 11d. Add manual Tree View zoom controls and fit-to-viewport.
 
 ## Product constraints
 
@@ -73,5 +76,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 11 is complete. Miller columns and the structured top-down Tree
-View are both available as native Obsidian ItemViews.
+Checkpoint 11c is complete. Miller columns and the structured top-down Tree
+View switch in place from one icon beside the shared heading.

@@ -68,9 +68,11 @@ plugins**.
 
 - Open the browser from the ribbon tree icon or run **Miller Tasks: Open task
   browser** from the command palette.
-- Open the structured hierarchy from the ribbon fork icon or run **Miller
-  Tasks: Open task tree**. The canvas uses manual horizontal and vertical
-  scrolling and never moves itself.
+- Use the icon immediately left of **Miller Tasks** to switch the current view
+  between columns and the structured hierarchy. The same Obsidian leaf stays
+  open, so this does not create duplicate tabs.
+- You can also run **Miller Tasks: Open task tree** directly. The canvas uses
+  manual horizontal and vertical scrolling and never moves itself.
 - Type into **New task** and press Enter. Selecting the new row opens its
   subtask column.
 - Click a row to select it. Double-click it, or press F2, to rename it.

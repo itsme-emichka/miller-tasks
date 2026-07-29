@@ -78,6 +78,12 @@ export default class MillerTasksPlugin extends Plugin {
             this.selectTask(taskId);
           },
           {
+            toggleView: () => {
+              void this.switchLeafView(
+                leaf,
+                MILLER_TASK_TREE_VIEW_TYPE,
+              );
+            },
             completeTask: (taskId, completed) => {
               void this.completeTask(taskId, completed);
             },
@@ -101,6 +107,12 @@ export default class MillerTasksPlugin extends Plugin {
             this.selectTask(taskId);
           },
           {
+            toggleView: () => {
+              void this.switchLeafView(
+                leaf,
+                MILLER_TASKS_VIEW_TYPE,
+              );
+            },
             completeTask: (taskId, completed) => {
               void this.completeTask(taskId, completed);
             },
@@ -152,9 +164,6 @@ export default class MillerTasksPlugin extends Plugin {
 
     this.addRibbonIcon("list-tree", "Open miller tasks", () => {
       void this.activateView();
-    });
-    this.addRibbonIcon("git-fork", "Open task tree", () => {
-      void this.activateTreeView();
     });
 
     this.addCommand({
@@ -370,6 +379,17 @@ export default class MillerTasksPlugin extends Plugin {
     }
 
     await workspace.revealLeaf(leaf);
+  }
+
+  private async switchLeafView(
+    leaf: WorkspaceLeaf,
+    viewType: string,
+  ): Promise<void> {
+    await leaf.setViewState({
+      type: viewType,
+      active: true,
+    });
+    await this.app.workspace.revealLeaf(leaf);
   }
 
   private async activateTreeView(): Promise<void> {

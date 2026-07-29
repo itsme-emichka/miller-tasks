@@ -51,6 +51,27 @@ describe("MillerTasksApp", () => {
     ).toBeInstanceOf(HTMLInputElement);
   });
 
+  it("switches to the task tree from the icon left of the heading", () => {
+    const toggleView = vi.fn();
+    const { container } = render(
+      <MillerTasksApp
+        store={createStore()}
+        onToggleView={toggleView}
+      />,
+    );
+    const header = container.querySelector(".miller-view-header");
+    const toggle = screen.getByRole("button", {
+      name: "Show task tree",
+    });
+
+    expect(header?.firstElementChild).toBe(toggle);
+    expect(toggle.nextElementSibling).toBe(
+      screen.getByRole("heading", { name: "Miller Tasks" }),
+    );
+    fireEvent.click(toggle);
+    expect(toggleView).toHaveBeenCalledOnce();
+  });
+
   it("adds a tree task to the pinned Today column from its row", () => {
     const store = createStore();
     store.createTask({ title: "Pin directly" });

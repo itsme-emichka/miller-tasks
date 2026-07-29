@@ -8,6 +8,7 @@ import { TaskSelection } from "../state/TaskSelection";
 import { TaskTreeApp } from "../ui/TaskTreeApp";
 
 interface MillerTaskTreeActions {
+  toggleView: () => void;
   completeTask: (taskId: string, completed: boolean) => void;
   deleteTask: (taskId: string) => void;
 }
@@ -46,6 +47,7 @@ export class MillerTaskTreeView extends ItemView {
         <TaskTreeApp
           store={this.taskStore}
           selection={this.taskSelection}
+          onToggleView={this.actions.toggleView}
           onTaskSelected={this.onTaskSelected}
           onTaskCompletion={this.actions.completeTask}
           onTaskDelete={this.actions.deleteTask}
