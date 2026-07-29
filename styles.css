@@ -313,6 +313,25 @@
   transform: rotate(180deg);
 }
 
+.miller-tasks-shell[data-compact="false"] .miller-today-column {
+  overflow: hidden;
+}
+
+.miller-tasks-shell[data-compact="false"]
+  .miller-today-sheet-content {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.miller-tasks-shell[data-compact="false"]
+  .miller-today-sheet-content
+  .miller-tasks-list {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .miller-tasks-columns {
   display: flex;
   min-width: 0;

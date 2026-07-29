@@ -46,6 +46,8 @@ columns, and the same background as the active Obsidian theme.
   long forms within the popup.
 - Hide completed Today tasks by default in compact mode and reveal them from
   one small disclosure inside the expanded sheet.
+- Collapse or reveal completed Today tasks from the same bottom disclosure on
+  desktop; desktop keeps them visible initially.
 
 Miller Tasks requires Obsidian 1.8.0 or newer. Mobile support is currently a
 beta and still requires physical-device touch and attachment QA.

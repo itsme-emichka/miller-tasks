@@ -212,6 +212,44 @@ describe("MillerTasksApp", () => {
     ]);
   });
 
+  it("collapses completed Today tasks from the desktop disclosure", () => {
+    const store = createStore();
+    const completed = store.createTask({ title: "Finished today" });
+    store.setTaskToday(completed.id, true);
+    store.completeSubtree(completed.id, true);
+    const open = store.createTask({ title: "Open today" });
+    store.setTaskToday(open.id, true);
+    render(
+      <MillerTasksApp store={store} compactLayout={false} />,
+    );
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+    const disclosure = within(today).getByRole("button", {
+      name: "Hide completed tasks",
+    });
+
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(today).getByRole("button", { name: "Finished today" }),
+    ).toBeVisible();
+    fireEvent.click(disclosure);
+
+    expect(
+      within(today).queryByRole("button", {
+        name: "Finished today",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(today).getByRole("button", { name: "Open today" }),
+    ).toBeVisible();
+    expect(
+      within(today).getByRole("button", {
+        name: "Show 1 completed task",
+      }),
+    ).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("hides completed Today tasks behind the compact disclosure", () => {
     const store = createStore();
     const completed = store.createTask({ title: "Finished today" });

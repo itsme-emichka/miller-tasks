@@ -22,6 +22,7 @@ can resume without reconstructing architecture or product decisions.
   sheet above Obsidian's navbar while containing mobile gestures. Checkpoint
   14a3 replaces single-line ellipsis with growing multi-line task rows, and
   checkpoint 14a4 constrains the compact inspector to the mobile safe area.
+  Checkpoint 14a5 adds the Today completed-task disclosure on desktop.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -1161,3 +1162,16 @@ horizontal viewport.
   than the available iPhone screen or the software keyboard changes it.
 - Desktop sidebar and modal sizing are unchanged. This checkpoint changes no
   task fields, drafts, attachments, or synchronized data.
+
+## Checkpoint 14a5 desktop Today completed disclosure
+
+- The same bottom disclosure now appears whenever Today contains completed
+  tasks on desktop or compact screens.
+- Desktop Today starts expanded to preserve its previous list contents; the
+  disclosure collapses completed rows and keeps incomplete rows visible.
+  Compact Today still starts collapsed and can reveal completed rows after the
+  sheet opens.
+- Desktop Today uses an internal scrolling list above a fixed disclosure, so
+  the arrow remains reachable at the bottom of the pinned column. One focused
+  regression verifies both collapse and re-expansion semantics without
+  changing task completion data.

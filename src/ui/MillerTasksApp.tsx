@@ -105,7 +105,9 @@ export function MillerTasksApp({
     () => store.getTodayTasks(now),
     [now, snapshot, store],
   );
-  const [showCompletedToday, setShowCompletedToday] = useState(false);
+  const [showCompletedToday, setShowCompletedToday] = useState(
+    !isCompact,
+  );
   const [todaySheetOpen, setTodaySheetOpen] = useState(false);
   const completedTodayCount = useMemo(
     () => todayTasks.filter((task) => task.completed).length,
@@ -114,10 +116,10 @@ export function MillerTasksApp({
   const openTodayCount = todayTasks.length - completedTodayCount;
   const visibleTodayTasks = useMemo(
     () =>
-      isCompact && !showCompletedToday
+      !showCompletedToday
         ? todayTasks.filter((task) => !task.completed)
         : todayTasks,
-    [isCompact, showCompletedToday, todayTasks],
+    [showCompletedToday, todayTasks],
   );
   const taskTitleById = useMemo(
     () =>
@@ -166,8 +168,8 @@ export function MillerTasksApp({
   }, [onTaskSelected, selectedPath]);
 
   useEffect(() => {
+    setShowCompletedToday(!isCompact);
     if (!isCompact) {
-      setShowCompletedToday(false);
       setTodaySheetOpen(false);
     }
   }, [isCompact]);
@@ -460,7 +462,7 @@ export function MillerTasksApp({
                 </p>
               ) : null}
             </div>
-            {isCompact && completedTodayCount > 0 ? (
+            {completedTodayCount > 0 ? (
               <button
                 type="button"
                 className="miller-today-completed-toggle"
