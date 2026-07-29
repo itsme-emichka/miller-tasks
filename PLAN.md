@@ -77,8 +77,12 @@ automatically while all checks are green.
       serialized coordinator with invalid-file quarantine and history reset.
 - [ ] 13f. Synchronize deterministic daily occurrences and attachment
       metadata/file arrival safely through replica files.
-- [ ] 13g. Pass the two-device offline, inactive-device, iCloud, and
-      Dropbox/Remotely Save release matrix without requiring a paid service.
+- [x] 13g1. Pass the physical Dropbox/Remotely Save macOS-to-iPhone matrix for
+      initial transfer plus create, edit, and delete propagation without a
+      paid service.
+- [ ] 13g2. Pass the remaining two-device offline, inactive-device, and
+      same-field conflict/resurrection matrix through the selected free
+      Dropbox transport.
 - [x] 14a. Audit runtime mobile APIs, add the responsive phone presentation,
       compact Today disclosure, press-and-hold inspector popup, narrow desktop
       fallback, and set `isDesktopOnly` to `false` for beta testing.
@@ -118,18 +122,14 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoints 14a, 14b, and 13c are complete. The responsive mobile beta is
-available through BRAT, and the synchronization design now uses ordinary
-`Miller Tasks/Sync/<replica-id>.json` files rather than one replaceable
-`data.json`. Each installation writes only its own file; causal version vectors
-let the existing schema-v3 field merge distinguish sequential edits from true
-conflicts after restart. Checkpoint 13d is also complete: Undo/Redo now applies
-fresh atomic field, tombstone, and existence versions instead of restoring
-obsolete sync metadata. Next, implement the replica envelope, conservative
-legacy bootstrap, and per-installation persistence while the beta receives
-physical iPhone QA. The pure envelope/vector/causal-merge portion of that work
-is complete as checkpoint 13e1. Checkpoints 13e2 and 13e3 now connect stable
-per-vault installation identity, conservative legacy bootstrap, ordinary vault
-files, event-driven reconciliation, invalid-file quarantine, and local history
-reset. Next, complete daily/attachment arrival handling and run the real
-Dropbox/Remotely Save two-device matrix.
+Checkpoints 13c through 13e3 are complete. The responsive mobile beta is
+available through BRAT, and each installation now owns one ordinary
+`Miller Tasks/Sync/<replica-id>.json` file. Causal version vectors distinguish
+sequential edits from true conflicts, while Undo/Redo emits fresh atomic
+versions instead of restoring obsolete synchronization metadata. Checkpoint
+13g1 also passed on physical macOS and iPhone installations through free
+Dropbox/Remotely Save transport: initial download, phone creation, Mac editing,
+and phone deletion all propagated in both directions while two valid replica
+files remained independent. Next, complete daily/attachment arrival hardening,
+the offline and inactive-device conflict matrix, and the remaining physical
+iPhone touch QA.

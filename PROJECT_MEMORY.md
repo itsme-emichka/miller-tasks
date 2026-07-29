@@ -14,10 +14,10 @@ can resume without reconstructing architecture or product decisions.
 ## Current state
 
 - Latest checkpoints: 14a responsive mobile beta, 14b/14b1 BRAT beta
-  distribution, 13c free replica transport revision, and 13d freshly
-  versioned Undo/Redo complete. Checkpoint 13e1 adds the isolated replica
-  envelope and causal version-vector merge; checkpoints 13e2/13e3 connect
-  conservative replica persistence and vault-event reconciliation.
+  distribution, 13c free replica transport revision, 13d freshly versioned
+  Undo/Redo, and 13e1 through 13e3 live replica persistence are complete.
+  Checkpoint 13g1 validates the first physical Dropbox/Remotely Save
+  macOS-to-iPhone matrix.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -27,8 +27,8 @@ can resume without reconstructing architecture or product decisions.
 - Distribution: GitHub prerelease `0.1.1` provides the replica-sync beta as
   `main.js`, `manifest.json`, and `styles.css` through Obsidian42 - BRAT.
 - Next work: checkpoint 13f daily/attachment file-arrival hardening, checkpoint
-  13g the simulated and Dropbox/Remotely Save two-device matrix, and checkpoint
-  14c physical iPhone QA.
+  13g2 offline/inactive-device conflict and resurrection testing through
+  Dropbox, and checkpoint 14c physical iPhone touch and attachment QA.
 
 The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
 task data before registering views.
@@ -1028,3 +1028,32 @@ horizontal viewport.
 - BRAT installations on Mac and iPhone can update from the existing repository
   entry. Physical Dropbox/Remotely Save setup remains checkpoint 13g and does
   not happen merely by updating the plugin.
+
+## Checkpoint 13g1 physical Dropbox transport matrix
+
+- A real macOS test vault and an iPhone vault passed bidirectional transport
+  through the free Dropbox option in Remotely Save.
+- The Mac vault is named `miller_tasks`. The iPhone vault remains named
+  `Notes` and targets the same cloud folder through Remotely Save's explicit
+  remote base directory override, proving that local vault names need not
+  match when the remote directory is configured deliberately.
+- The Mac installation uploaded the initial replica before the iPhone joined.
+  The iPhone then downloaded and materialized the Mac task tree without
+  changing the Mac source data.
+- A disposable root task created on iPhone propagated to Mac. Renaming it on
+  Mac propagated back to iPhone. Deleting it on iPhone propagated to Mac, so
+  creation, field-version updates, and deletion tombstones all passed the
+  physical transport boundary.
+- After the round trip, the Mac vault contained two valid version-1 replica
+  envelopes with independent ownership paths and no synchronized conflict
+  records.
+- Existing mobile legacy records were not erased by the join. Completed and
+  nested records were not immediately visible in the default mobile
+  projection, but structural comparison confirmed that the original Mac
+  records and the delivered mobile records remained distinct.
+- Manual synchronization was used for the release matrix. Remotely Save
+  scheduling is transport configuration rather than Miller Tasks state;
+  `.obsidian` remains excluded and Undo/Redo remains device-local.
+- The remaining release gate is checkpoint 13g2: exercise offline concurrent
+  edits, a long-inactive device, delete-versus-edit resurrection rules, and
+  recovery after interrupted file delivery through the same Dropbox setup.
