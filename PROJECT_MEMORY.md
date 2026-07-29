@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 10 complete.
+- Checkpoint: 11a complete; 11b pending.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: user testing and issue-driven refinement.
+- Next work: interactive structured Tree View.
 
 The plugin loads and migrates validated schema-v1 or schema-v2 task data before
 registering views.
@@ -78,6 +78,8 @@ MillerTasksPlugin
   Finder-style arrow navigation and focus restoration without moving the
   horizontal viewport.
 - `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
+- `src/ui/taskTreeLayout.ts` deterministically places complete task forests
+  from top to bottom without overlaps or force simulation.
 - `src/view/ConfirmationModal.ts` provides native Obsidian confirmations for
   parent completion and subtree deletion.
 - `src/ui/TaskInspectorApp.tsx` renders task metadata and daily-template
@@ -546,3 +548,14 @@ horizontal viewport.
   the same completion state.
 - Completing or reopening a task immediately moves it to the appropriate
   position through the existing store subscription.
+
+## Checkpoint 11a verification
+
+- Root tasks occupy depth zero and every child depth is rendered below its
+  parent.
+- Leaf slots preserve explicit sibling and root order with a fixed minimum
+  horizontal gap.
+- Branch parents center over the first-to-last child span.
+- Edges expose exact parent-bottom and child-top connection coordinates.
+- Generated daily instances are excluded because they do not belong to the
+  persistent hierarchy.

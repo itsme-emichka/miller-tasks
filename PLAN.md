@@ -49,6 +49,9 @@ automatically while all checks are green.
 - [x] 10h. Show a subtle direct-parent caption below subtasks in Today.
 - [x] 10i. Move completed tasks below incomplete peers inside each Today
       section.
+- [x] 11a. Add a deterministic top-down layout engine for the complete task
+      forest.
+- [ ] 11b. Build and register the interactive structured Tree View.
 
 ## Product constraints
 
@@ -70,5 +73,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All requested checkpoint-10 interaction, path styling, and Today ordering
-changes are complete.
+Checkpoint 11a is complete. The next work is the interactive structured Tree
+View built on the tested layout engine.
