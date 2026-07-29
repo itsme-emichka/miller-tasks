@@ -110,6 +110,9 @@ automatically while all checks are green.
       prerelease `0.1.2` for physical iPhone and narrow-window testing.
 - [x] 14b3. Publish the mobile navbar and gesture-containment fixes as GitHub
       prerelease `0.1.3` for BRAT retesting on iPhone.
+- [x] 14b4. Publish multi-line task rows, safe-area inspector sizing, desktop
+      Today completed disclosure, and compact daily editing as GitHub
+      prerelease `0.1.4`.
 - [ ] 14c. Complete physical iPhone touch QA, choose a mobile-safe reorder
       gesture that does not block horizontal scrolling, and verify attachment
       import/open/trash behavior on iOS.
@@ -155,7 +158,8 @@ section with a native-theme bottom sheet, leaving the hierarchy full-height
 and horizontally scrollable behind it. Physical iPhone QA exposed collisions
 with Obsidian's floating navbar, pull-down quick action, and edge sidebar
 gesture; checkpoint 14a2 measures the navbar overlap and contains the sheet
-and hierarchy gestures inside Miller Tasks. Version `0.1.3` publishes those
-fixes through BRAT for the same physical retest. Next, complete that iPhone
-gesture retest, then daily/attachment arrival hardening and the offline and
-inactive-device conflict matrix.
+and hierarchy gestures inside Miller Tasks. Version `0.1.4` adds the physical
+QA follow-ups from checkpoints 14a3 through 14a6: wrapping rows, safe-area
+inspector sizing, a desktop Today disclosure, and compact daily editing. Next,
+complete that iPhone UI retest, then daily/attachment arrival hardening and
+the offline and inactive-device conflict matrix.
