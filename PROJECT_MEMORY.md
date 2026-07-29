@@ -13,19 +13,19 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Latest checkpoints: 14a responsive mobile beta, 14b BRAT beta distribution,
-  13c free replica transport revision, and 13d freshly versioned Undo/Redo
-  complete. Checkpoint 13e1 adds the isolated replica envelope and causal
-  version-vector merge; checkpoints 13e2/13e3 connect conservative replica
-  persistence and vault-event reconciliation.
+- Latest checkpoints: 14a responsive mobile beta, 14b/14b1 BRAT beta
+  distribution, 13c free replica transport revision, and 13d freshly
+  versioned Undo/Redo complete. Checkpoint 13e1 adds the isolated replica
+  envelope and causal version-vector merge; checkpoints 13e2/13e3 connect
+  conservative replica persistence and vault-event reconciliation.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
-- Plugin version: `0.1.0`.
+- Plugin version: `0.1.1`.
 - Minimum Obsidian version: `1.8.0`.
 - Mobile beta: enabled with `isDesktopOnly: false`.
-- Distribution: GitHub prerelease `0.1.0` provides `main.js`, `manifest.json`,
-  and `styles.css` for installation through Obsidian42 - BRAT.
+- Distribution: GitHub prerelease `0.1.1` provides the replica-sync beta as
+  `main.js`, `manifest.json`, and `styles.css` through Obsidian42 - BRAT.
 - Next work: checkpoint 13f daily/attachment file-arrival hardening, checkpoint
   13g the simulated and Dropbox/Remotely Save two-device matrix, and checkpoint
   14c physical iPhone QA.
@@ -1018,3 +1018,13 @@ horizontal viewport.
   and the production build.
 - Next checkpoints harden daily/attachment arrival and run the same matrix
   through Dropbox/Remotely Save on macOS and iOS.
+
+## Checkpoint 14b1 BRAT sync beta distribution
+
+- Version `0.1.1` is the first BRAT beta that enables per-installation replica
+  persistence and vault-event reconciliation.
+- Its GitHub prerelease attaches exactly `main.js`, `manifest.json`, and
+  `styles.css`, built from the tagged `main` commit after all checks pass.
+- BRAT installations on Mac and iPhone can update from the existing repository
+  entry. Physical Dropbox/Remotely Save setup remains checkpoint 13g and does
+  not happen merely by updating the plugin.
