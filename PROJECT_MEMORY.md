@@ -13,17 +13,19 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Latest checkpoints: 14a responsive mobile beta and 13c free replica
-  transport revision complete.
+- Latest checkpoints: 14a responsive mobile beta, 14b BRAT beta distribution,
+  and 13c free replica transport revision complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
 - Mobile beta: enabled with `isDesktopOnly: false`.
+- Distribution: GitHub prerelease `0.1.0` provides `main.js`, `manifest.json`,
+  and `styles.css` for installation through Obsidian42 - BRAT.
 - Next work: checkpoint 13d, replacing snapshot-restoring Undo/Redo with
   freshly versioned inverse operations before replica persistence is
-  connected.
+  connected, plus checkpoint 14c physical iPhone QA.
 
 The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
 task data before registering views.
@@ -313,20 +315,21 @@ At the end of every checkpoint:
   controls out of the minimal column surface.
 - Empty attachment folders are currently retained after their last file moves
   to trash; they are harmless and keep filesystem logic conservative.
-- This is a source beta, not an Obsidian community-plugin release. Installation
-  currently requires building and copying the three artifacts.
+- This is a GitHub beta rather than an Obsidian Community Plugins release.
+  Installation is available through Obsidian42 - BRAT or by copying the three
+  release artifacts manually.
 - The development vault is local and ignored by Git.
 - `isDesktopOnly` is `false` so the compact beta can be installed on iOS.
   Physical iPhone touch, attachment, keyboard, and lifecycle QA is still
-  required before a public mobile release.
+  required before a Community Plugins submission.
 - Schema v3 is live, but per-installation replica persistence and vault-event
   reconciliation are not wired yet; this checkpoint must not be treated as
   simultaneous multi-device support.
 - Compact touch scrolling intentionally takes priority over row dragging.
   Mobile reordering needs a dedicated gesture or handle that does not block
   horizontal column swipes.
-- Undo/Redo still restores full schema-v3 snapshots as a desktop-only
-  transition. Checkpoint 13d must replace this with freshly versioned inverse
+- Undo/Redo still restores full schema-v3 snapshots as a pre-sync transition.
+  Checkpoint 13d must replace this with freshly versioned inverse
   operations before external merges are accepted.
 
 ## Checkpoint 1 verification
@@ -898,3 +901,16 @@ horizontal viewport.
 - Next implementation checkpoint 13d changes Undo/Redo to fresh versioned
   inverse mutations. Only then can replica merges be connected without an Undo
   restoring obsolete sync metadata.
+
+## Checkpoint 14b BRAT beta distribution
+
+- Version `0.1.0` is the first installable GitHub prerelease.
+- The release attaches exactly the three Obsidian runtime assets:
+  `main.js`, `manifest.json`, and `styles.css`.
+- Obsidian42 - BRAT can install the beta from
+  `https://github.com/itsme-emichka/miller-tasks` on desktop or mobile.
+- `README.md` documents BRAT installation before the source-build path and
+  states that cross-device task reconciliation is not connected yet.
+- The beta is intended for physical iPhone interface QA with test tasks.
+  Publishing the release does not claim that Mac task data already
+  synchronizes to the phone.

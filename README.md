@@ -44,6 +44,25 @@ Obsidian theme.
 Miller Tasks requires Obsidian 1.8.0 or newer. Mobile support is currently a
 beta and still requires physical-device touch and attachment QA.
 
+## Install the beta with BRAT
+
+Miller Tasks is distributed as a GitHub beta before its Community Plugins
+submission. To install it on desktop or mobile:
+
+1. Open **Settings → Community plugins** in Obsidian and turn off Restricted
+   Mode.
+2. Browse the community catalog, install **Obsidian42 - BRAT**, and enable it.
+3. Open the BRAT settings and select **Add beta plugin**, or run **BRAT: Add a
+   beta plugin for testing** from the command palette.
+4. Enter `https://github.com/itsme-emichka/miller-tasks`.
+5. After BRAT downloads the release, return to **Settings → Community
+   plugins** and enable **Miller Tasks**.
+
+BRAT can install future Miller Tasks beta releases from the same repository.
+Cross-device task reconciliation is not connected yet. Until it is released,
+use the mobile beta with test tasks rather than expecting a Mac task database
+to appear on a phone.
+
 ## Install the beta from source
 
 Requirements:

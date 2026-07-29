@@ -79,7 +79,9 @@ automatically while all checks are green.
 - [x] 14a. Audit runtime mobile APIs, add the responsive phone presentation,
       compact Today disclosure, press-and-hold inspector popup, narrow desktop
       fallback, and set `isDesktopOnly` to `false` for beta testing.
-- [ ] 14b. Complete physical iPhone touch QA, choose a mobile-safe reorder
+- [x] 14b. Publish an installable `0.1.0` GitHub beta release with the three
+      Obsidian assets so the mobile build can be installed through BRAT.
+- [ ] 14c. Complete physical iPhone touch QA, choose a mobile-safe reorder
       gesture that does not block horizontal scrolling, and verify attachment
       import/open/trash behavior on iOS.
 
@@ -111,10 +113,11 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoints 14a and 13c are complete. The responsive mobile beta is enabled,
-and the synchronization design now uses ordinary
+Checkpoints 14a, 14b, and 13c are complete. The responsive mobile beta is
+available through BRAT, and the synchronization design now uses ordinary
 `Miller Tasks/Sync/<replica-id>.json` files rather than one replaceable
 `data.json`. Each installation writes only its own file; causal version vectors
 let the existing schema-v3 field merge distinguish sequential edits from true
 conflicts after restart. Next, replace snapshot Undo/Redo with freshly
-versioned inverse operations before connecting replica persistence.
+versioned inverse operations before connecting replica persistence, while the
+beta receives physical iPhone QA.
