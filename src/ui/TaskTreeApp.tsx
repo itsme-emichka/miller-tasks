@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { JSX, KeyboardEvent } from "react";
 
 import { isTaskOverdue } from "../domain/due";
@@ -20,6 +20,11 @@ interface TaskTreeAppProps {
   onTaskDelete?: (taskId: string) => void;
 }
 
+const MIN_TREE_ZOOM = 0.02;
+const MAX_TREE_ZOOM = 2;
+const TREE_ZOOM_STEP = 0.1;
+const TREE_FIT_PADDING = 24;
+
 export function TaskTreeApp({
   store,
   selection,
@@ -34,64 +39,221 @@ export function TaskTreeApp({
     () => layoutTaskTree(snapshot.tasks),
     [snapshot],
   );
+  const viewportElement = useRef<HTMLDivElement | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const hasTasks = layout.nodes.length > 0;
+
+  useEffect(() => {
+    const viewport = viewportElement.current;
+    if (!viewport) {
+      return;
+    }
+
+    const handleWheel = (event: WheelEvent): void => {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+
+      event.preventDefault();
+      const direction = event.deltaY < 0 ? 1 : -1;
+      setZoom((current) =>
+        clampZoom(current + direction * TREE_ZOOM_STEP),
+      );
+    };
+
+    viewport.addEventListener("wheel", handleWheel, {
+      passive: false,
+    });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  }, []);
 
   const selectTask = (taskId: string): void => {
     selection.setSelectedTaskId(taskId);
     onTaskSelected?.(taskId);
   };
 
+  const fitTree = (): void => {
+    const viewport = viewportElement.current;
+    if (
+      !viewport ||
+      !hasTasks ||
+      viewport.clientWidth <= 0 ||
+      viewport.clientHeight <= 0
+    ) {
+      return;
+    }
+
+    const availableWidth = Math.max(
+      1,
+      viewport.clientWidth - TREE_FIT_PADDING * 2,
+    );
+    const availableHeight = Math.max(
+      1,
+      viewport.clientHeight - TREE_FIT_PADDING * 2,
+    );
+    setZoom(
+      clampZoom(
+        Math.min(
+          1,
+          availableWidth / layout.width,
+          availableHeight / layout.height,
+        ),
+      ),
+    );
+    viewport.scrollLeft = 0;
+    viewport.scrollTop = 0;
+  };
+
   return (
     <main className="miller-task-tree-shell">
-      <MillerViewHeader mode="tree" onToggleView={onToggleView} />
+      <MillerViewHeader
+        mode="tree"
+        onToggleView={onToggleView}
+        controls={
+          <TreeZoomControls
+            zoom={zoom}
+            disabled={!hasTasks}
+            onZoomOut={() =>
+              setZoom((current) =>
+                clampZoom(current - TREE_ZOOM_STEP),
+              )
+            }
+            onReset={() => setZoom(1)}
+            onZoomIn={() =>
+              setZoom((current) =>
+                clampZoom(current + TREE_ZOOM_STEP),
+              )
+            }
+            onFit={fitTree}
+          />
+        }
+      />
       <div
+        ref={viewportElement}
         className="miller-task-tree-viewport"
+        role="region"
         aria-label="Task tree"
       >
-        {layout.nodes.length === 0 ? (
+        {!hasTasks ? (
           <p className="miller-task-tree-empty">No tasks</p>
         ) : (
           <div
-            className="miller-task-tree-canvas"
+            className="miller-task-tree-zoom-surface"
             style={{
-              width: layout.width,
-              height: layout.height,
+              width: layout.width * zoom,
+              height: layout.height * zoom,
             }}
           >
-            <svg
-              className="miller-task-tree-edges"
-              width={layout.width}
-              height={layout.height}
-              viewBox={`0 0 ${layout.width} ${layout.height}`}
-              aria-hidden="true"
+            <div
+              className="miller-task-tree-canvas"
+              style={{
+                width: layout.width,
+                height: layout.height,
+                transform: `scale(${zoom})`,
+              }}
             >
-              {layout.edges.map((edge) => (
-                <path
-                  key={`${edge.parentId}:${edge.childId}`}
-                  d={createEdgePath(edge)}
+              <svg
+                className="miller-task-tree-edges"
+                width={layout.width}
+                height={layout.height}
+                viewBox={`0 0 ${layout.width} ${layout.height}`}
+                aria-hidden="true"
+              >
+                {layout.edges.map((edge) => (
+                  <path
+                    key={`${edge.parentId}:${edge.childId}`}
+                    d={createEdgePath(edge)}
+                  />
+                ))}
+              </svg>
+              {layout.nodes.map((node) => (
+                <TreeTaskNode
+                  key={node.task.id}
+                  task={node.task}
+                  selected={selectedTaskId === node.task.id}
+                  x={node.x}
+                  y={node.y}
+                  width={node.width}
+                  height={node.height}
+                  onSelect={() => selectTask(node.task.id)}
+                  onCompletion={(completed) =>
+                    onTaskCompletion?.(node.task.id, completed)
+                  }
+                  onDelete={() => onTaskDelete?.(node.task.id)}
                 />
               ))}
-            </svg>
-            {layout.nodes.map((node) => (
-              <TreeTaskNode
-                key={node.task.id}
-                task={node.task}
-                selected={selectedTaskId === node.task.id}
-                x={node.x}
-                y={node.y}
-                width={node.width}
-                height={node.height}
-                onSelect={() => selectTask(node.task.id)}
-                onCompletion={(completed) =>
-                  onTaskCompletion?.(node.task.id, completed)
-                }
-                onDelete={() => onTaskDelete?.(node.task.id)}
-              />
-            ))}
+            </div>
           </div>
         )}
       </div>
     </main>
   );
+}
+
+interface TreeZoomControlsProps {
+  zoom: number;
+  disabled: boolean;
+  onZoomOut: () => void;
+  onReset: () => void;
+  onZoomIn: () => void;
+  onFit: () => void;
+}
+
+function TreeZoomControls({
+  zoom,
+  disabled,
+  onZoomOut,
+  onReset,
+  onZoomIn,
+  onFit,
+}: TreeZoomControlsProps): JSX.Element {
+  return (
+    <div
+      className="miller-task-tree-zoom-controls"
+      aria-label="Tree zoom controls"
+    >
+      <button
+        type="button"
+        aria-label="Zoom out"
+        title="Zoom out"
+        disabled={disabled || zoom <= MIN_TREE_ZOOM}
+        onClick={onZoomOut}
+      >
+        −
+      </button>
+      <button
+        className="miller-task-tree-zoom-value"
+        type="button"
+        aria-label="Reset tree zoom"
+        title="Reset to 100%"
+        disabled={disabled}
+        onClick={onReset}
+      >
+        {Math.round(zoom * 100)}%
+      </button>
+      <button
+        type="button"
+        aria-label="Zoom in"
+        title="Zoom in"
+        disabled={disabled || zoom >= MAX_TREE_ZOOM}
+        onClick={onZoomIn}
+      >
+        +
+      </button>
+      <button
+        className="miller-task-tree-fit"
+        type="button"
+        disabled={disabled}
+        onClick={onFit}
+      >
+        Fit
+      </button>
+    </div>
+  );
+}
+
+function clampZoom(zoom: number): number {
+  return Math.min(MAX_TREE_ZOOM, Math.max(MIN_TREE_ZOOM, zoom));
 }
 
 interface TreeTaskNodeProps {

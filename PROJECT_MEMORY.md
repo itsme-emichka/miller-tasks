@@ -608,3 +608,19 @@ horizontal viewport.
   palette action remains available for direct opening.
 - The toggle inherits Obsidian colors and focus treatment without introducing
   a separate toolbar, card, or alternate background.
+
+## Checkpoint 11d verification
+
+- Tree View exposes compact `−`, percentage reset, `+`, and `Fit` controls at
+  the right side of the same shared header.
+- Cmd/Ctrl+wheel changes zoom while an unmodified wheel retains native
+  horizontal and vertical scrolling.
+- Zoom is clamped from 2% through 200%. `Fit` measures the current viewport and
+  scales the complete layout down so every task is visible at once.
+- The scaled canvas keeps one uniform Obsidian primary background; task nodes
+  remain native checkbox-and-text rows and edges retain a one-pixel apparent
+  weight.
+- View selection never changes scale or scroll position. Only explicit zoom,
+  Fit, and native manual scrolling move the tree presentation.
+- Sixty-two tests across thirteen files, lint, TypeScript, and the production
+  build pass after the view-toggle and zoom additions.

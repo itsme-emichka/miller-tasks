@@ -37,6 +37,76 @@ describe("TaskTreeApp", () => {
     expect(toggleView).toHaveBeenCalledOnce();
   });
 
+  it("zooms only from explicit controls or a modified wheel", () => {
+    const store = createStore();
+    store.createTask({ title: "Zoomable" });
+    const { container } = render(
+      <TaskTreeApp
+        store={store}
+        selection={new TaskSelection()}
+      />,
+    );
+    const zoomValue = screen.getByRole("button", {
+      name: "Reset tree zoom",
+    });
+    const viewport = screen.getByRole("region", {
+      name: "Task tree",
+    });
+
+    expect(zoomValue).toHaveTextContent("100%");
+    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+    expect(zoomValue).toHaveTextContent("90%");
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    expect(zoomValue).toHaveTextContent("100%");
+
+    fireEvent.wheel(viewport, { deltaY: 100 });
+    expect(zoomValue).toHaveTextContent("100%");
+    fireEvent.wheel(viewport, { ctrlKey: true, deltaY: 100 });
+    expect(zoomValue).toHaveTextContent("90%");
+    expect(
+      container.querySelector<HTMLElement>(
+        ".miller-task-tree-canvas",
+      )?.style.transform,
+    ).toBe("scale(0.9)");
+  });
+
+  it("fits the complete tree inside the current viewport", () => {
+    const store = createStore();
+    const parent = store.createTask({ title: "Parent" });
+    store.createTask({ parentId: parent.id, title: "Child one" });
+    store.createTask({ parentId: parent.id, title: "Child two" });
+    const { container } = render(
+      <TaskTreeApp
+        store={store}
+        selection={new TaskSelection()}
+      />,
+    );
+    const viewport = screen.getByRole("region", {
+      name: "Task tree",
+    });
+    Object.defineProperties(viewport, {
+      clientWidth: { configurable: true, value: 160 },
+      clientHeight: { configurable: true, value: 100 },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Fit" }));
+
+    const percentage = Number.parseInt(
+      screen
+        .getByRole("button", { name: "Reset tree zoom" })
+        .textContent ?? "100",
+      10,
+    );
+    expect(percentage).toBeLessThan(100);
+    expect(
+      Number.parseFloat(
+        container.querySelector<HTMLElement>(
+          ".miller-task-tree-zoom-surface",
+        )!.style.width,
+      ),
+    ).toBeLessThan(160);
+  });
+
   it("renders the full hierarchy with parents above children", () => {
     const store = createStore();
     const parent = store.createTask({ title: "Parent" });

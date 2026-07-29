@@ -54,7 +54,7 @@ automatically while all checks are green.
 - [x] 11b. Build and register the interactive structured Tree View.
 - [x] 11c. Add one icon beside the shared heading that switches the current
       Obsidian leaf between Miller columns and Tree View.
-- [ ] 11d. Add manual Tree View zoom controls and fit-to-viewport.
+- [x] 11d. Add manual Tree View zoom controls and fit-to-viewport.
 
 ## Product constraints
 
@@ -76,5 +76,6 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 11c is complete. Miller columns and the structured top-down Tree
-View switch in place from one icon beside the shared heading.
+Checkpoint 11d is complete. Miller columns and the structured top-down Tree
+View switch in place, and Tree View can be scaled from 2% to 200% or fitted
+inside the current viewport.

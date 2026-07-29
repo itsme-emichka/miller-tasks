@@ -73,6 +73,9 @@ plugins**.
   open, so this does not create duplicate tabs.
 - You can also run **Miller Tasks: Open task tree** directly. The canvas uses
   manual horizontal and vertical scrolling and never moves itself.
+- In Tree View, use `−`, the percentage reset, `+`, or **Fit** beside the
+  heading. Cmd/Ctrl+wheel also zooms; an unmodified wheel keeps its normal
+  scrolling behavior. **Fit** scales the complete tree into the visible area.
 - Type into **New task** and press Enter. Selecting the new row opens its
   subtask column.
 - Click a row to select it. Double-click it, or press F2, to rename it.

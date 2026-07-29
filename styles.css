@@ -45,6 +45,7 @@
 }
 
 .miller-view-header h1 {
+  flex: 1 1 auto;
   min-width: 0;
   margin: 0;
   padding: 1rem 0.5rem;
@@ -95,6 +96,46 @@
   align-items: center;
 }
 
+.miller-task-tree-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.miller-task-tree-zoom-controls button {
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--font-ui-smaller);
+}
+
+.miller-task-tree-zoom-controls button:hover:not(:disabled) {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.miller-task-tree-zoom-controls button:focus-visible {
+  color: var(--interactive-accent);
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.miller-task-tree-zoom-controls
+  .miller-task-tree-zoom-value {
+  min-width: 3.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.miller-task-tree-zoom-controls .miller-task-tree-fit {
+  min-width: 2.5rem;
+}
+
 .miller-task-tree-viewport {
   min-width: 0;
   min-height: 0;
@@ -103,11 +144,17 @@
   overscroll-behavior: contain;
 }
 
-.miller-task-tree-canvas {
+.miller-task-tree-zoom-surface {
   position: relative;
-  min-height: 100%;
   margin: 0 auto;
   background: var(--background-primary);
+}
+
+.miller-task-tree-canvas {
+  position: absolute;
+  inset: 0 auto auto 0;
+  background: var(--background-primary);
+  transform-origin: top left;
 }
 
 .miller-task-tree-edges {
