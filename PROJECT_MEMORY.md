@@ -535,3 +535,14 @@ horizontal viewport.
   with single-line truncation for long titles.
 - The caption adds no icon, heading, card, alternate background, or new
   interaction target.
+
+## Checkpoint 10i verification
+
+- Ordinary Today tasks remain above the daily section and the existing
+  hairline stays between those groups.
+- Inside both ordinary and daily groups, incomplete tasks sort before
+  completed tasks.
+- Stable task-added order and daily-template order remain unchanged within
+  the same completion state.
+- Completing or reopening a task immediately moves it to the appropriate
+  position through the existing store subscription.

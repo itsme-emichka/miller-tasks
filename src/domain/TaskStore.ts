@@ -105,20 +105,19 @@ export class TaskStore {
     return this.data.tasks
       .filter((task) => isTodayTaskVisible(task, now))
       .sort((left, right) => {
-        if (
-          left.dailyTemplateId !== null &&
-          right.dailyTemplateId !== null
-        ) {
+        const leftIsDaily = left.dailyTemplateId !== null;
+        const rightIsDaily = right.dailyTemplateId !== null;
+        if (leftIsDaily !== rightIsDaily) {
+          return leftIsDaily ? 1 : -1;
+        }
+        if (left.completed !== right.completed) {
+          return left.completed ? 1 : -1;
+        }
+        if (leftIsDaily && rightIsDaily) {
           return (
-            (templateOrder.get(left.dailyTemplateId) ?? left.order) -
-            (templateOrder.get(right.dailyTemplateId) ?? right.order)
+            (templateOrder.get(left.dailyTemplateId!) ?? left.order) -
+            (templateOrder.get(right.dailyTemplateId!) ?? right.order)
           );
-        }
-        if (left.dailyTemplateId !== null) {
-          return 1;
-        }
-        if (right.dailyTemplateId !== null) {
-          return -1;
         }
         return (
           (left.todayAddedAt ?? left.createdAt) -

@@ -47,6 +47,8 @@ automatically while all checks are green.
 - [x] 10g. Underline only the current task while keeping its selected
       ancestors accent-colored without underlines.
 - [x] 10h. Show a subtle direct-parent caption below subtasks in Today.
+- [x] 10i. Move completed tasks below incomplete peers inside each Today
+      section.
 
 ## Product constraints
 
@@ -68,5 +70,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-All requested checkpoint-10 interaction, path styling, and Today context
+All requested checkpoint-10 interaction, path styling, and Today ordering
 changes are complete.

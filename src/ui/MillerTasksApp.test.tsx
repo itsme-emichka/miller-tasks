@@ -139,6 +139,27 @@ describe("MillerTasksApp", () => {
     expect(divider?.nextElementSibling).toBe(rows[1]);
   });
 
+  it("renders completed Today tasks after incomplete peers", () => {
+    const store = createStore();
+    const completed = store.createTask({ title: "Already done" });
+    store.setTaskToday(completed.id, true);
+    store.completeSubtree(completed.id, true);
+    const open = store.createTask({ title: "Still open" });
+    store.setTaskToday(open.id, true);
+    render(<MillerTasksApp store={store} />);
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+    const rows = Array.from(
+      today.querySelectorAll<HTMLElement>(".miller-task-row"),
+    );
+
+    expect(rows.map((row) => row.dataset.taskId)).toEqual([
+      open.id,
+      completed.id,
+    ]);
+  });
+
   it("adds only recursive leaf descendants when a parent enters Today", () => {
     const store = createStore();
     const parent = store.createTask({ title: "Parent" });

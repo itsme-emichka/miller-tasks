@@ -242,6 +242,33 @@ describe("TaskStore", () => {
     ]);
   });
 
+  it("places completed tasks last inside each Today group", () => {
+    const store = createStore();
+    const completedOrdinary = store.createTask({
+      title: "Completed ordinary",
+    });
+    store.setTaskToday(completedOrdinary.id, true);
+    store.completeSubtree(completedOrdinary.id, true);
+    const openOrdinary = store.createTask({ title: "Open ordinary" });
+    store.setTaskToday(openOrdinary.id, true);
+    const completedTemplate = store.createDailyTemplate(
+      "Completed daily",
+    );
+    const completedDaily = store.getTasksForDailyTemplate(
+      completedTemplate.id,
+    )[0]!;
+    store.completeSubtree(completedDaily.id, true);
+    const openTemplate = store.createDailyTemplate("Open daily");
+    const openDaily = store.getTasksForDailyTemplate(openTemplate.id)[0]!;
+
+    expect(store.getTodayTasks().map((task) => task.id)).toEqual([
+      openOrdinary.id,
+      completedOrdinary.id,
+      openDaily.id,
+      completedDaily.id,
+    ]);
+  });
+
   it("projects only recursive leaf descendants into Today", () => {
     const store = createStore();
     const parent = store.createTask({ title: "Parent" });
