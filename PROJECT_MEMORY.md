@@ -13,16 +13,17 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 14a complete.
+- Latest checkpoints: 14a responsive mobile beta and 13c free replica
+  transport revision complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
 - Mobile beta: enabled with `isDesktopOnly: false`.
-- Next work: revise `SYNC_DESIGN.md` around per-installation replica files
-  inside the ordinary vault, then add operation-based Undo/Redo and validate
-  the free Dropbox/Remotely Save transport.
+- Next work: checkpoint 13d, replacing snapshot-restoring Undo/Redo with
+  freshly versioned inverse operations before replica persistence is
+  connected.
 
 The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
 task data before registering views.
@@ -44,7 +45,8 @@ MillerTasksPlugin
 ├── schema-v3 synchronization domain
 │   ├── deterministic schema-v1/v2 migration + canonical serialization
 │   ├── stable position keys + legacy-compatible UI materialization
-│   └── pure entity/field/tombstone/conflict merge
+│   ├── pure entity/field/tombstone/conflict merge
+│   └── planned causal replica envelope + version-vector merge context
 ├── TaskSelection
 │   └── shared selected-task state
 ├── TaskDraftBuffer
@@ -93,6 +95,11 @@ MillerTasksPlugin
 - `src/sync/mergeSyncData.ts` provides the pure state join, three-way conflict
   recognition, logical-version comparison, entity and attachment presence,
   and conflict-dismissal filtering.
+- `SYNC_DESIGN.md` now supersedes the original single-`data.json` transport.
+  Shared state will use one ordinary
+  `Miller Tasks/Sync/<replica-id>.json` file per installation. Dropbox or
+  another vault synchronizer only transports files and never integrates with
+  Miller Tasks directly.
 - `src/sync/parseSyncData.ts` validates persisted schema v3 and routes legacy
   data through deterministic migration.
 - `src/sync/positionKey.ts` creates stable lexicographic keys before, between,
@@ -312,13 +319,14 @@ At the end of every checkpoint:
 - `isDesktopOnly` is `false` so the compact beta can be installed on iOS.
   Physical iPhone touch, attachment, keyboard, and lifecycle QA is still
   required before a public mobile release.
-- Schema v3 is live, but `onExternalSettingsChange()` is not wired yet; this
-  checkpoint alone must not be treated as simultaneous multi-device support.
+- Schema v3 is live, but per-installation replica persistence and vault-event
+  reconciliation are not wired yet; this checkpoint must not be treated as
+  simultaneous multi-device support.
 - Compact touch scrolling intentionally takes priority over row dragging.
   Mobile reordering needs a dedicated gesture or handle that does not block
   horizontal column swipes.
 - Undo/Redo still restores full schema-v3 snapshots as a desktop-only
-  transition. Checkpoint 13c must replace this with freshly versioned inverse
+  transition. Checkpoint 13d must replace this with freshly versioned inverse
   operations before external merges are accepted.
 
 ## Checkpoint 1 verification
@@ -852,3 +860,41 @@ horizontal viewport.
   v3 merge semantics but move shared state to per-installation ordinary vault
   files that can be transported by iCloud, Dropbox/Remotely Save, or another
   file synchronizer.
+
+## Checkpoint 13c free replica transport revision
+
+- `SYNC_DESIGN.md` no longer treats plugin `data.json` or
+  `onExternalSettingsChange()` as the shared transport. A provider can replace
+  one common file before a closed device ever observes both versions, so that
+  design cannot meet the inactive-device guarantee.
+- Shared state will live under `Miller Tasks/Sync/` as one canonical JSON
+  replica per Miller Tasks installation. Each installation writes only the
+  file named by its stable random local ID and reads all valid replica files.
+- The installation ID is retained in device-local browser storage and contains
+  no device name, user identity, provider identity, or credentials. Clearing
+  local application data creates a new replica without deleting the old one.
+- Replica envelopes contain `replicaId`, monotonic `generation`, the canonical
+  schema-v3 state, and an `observed` version vector. Stable replica actors plus
+  vectors allow a future merge to distinguish a sequential same-field edit
+  from a concurrent one even after Obsidian restarts.
+- Material remote state is absorbed into the local replica for redundancy.
+  Vector-only changes do not trigger writes, preventing endless
+  acknowledgement loops.
+- Replica `create`, `modify`, `rename`, and `delete` events will be debounced
+  and reconciled inside the same serialized coordinator as local mutations.
+  A missing replica file never means that its tasks were deleted; only entity
+  tombstones have deletion semantics.
+- Existing `data.json` remains the current live store until replica persistence
+  is implemented. Migration will write a valid local replica before switching
+  durability and will leave the legacy file intact as a frozen first-release
+  fallback.
+- The first free cross-platform matrix uses Dropbox through Remotely Save.
+  Miller Tasks will not implement Dropbox OAuth or inspect Remotely Save
+  credentials. Remotely Save only needs to transfer the ordinary `Sync` and
+  `Attachments` folders.
+- iOS background suspension means community plugins cannot promise real-time
+  transfer. The product promises deterministic eventual convergence after the
+  provider runs, not live collaboration.
+- Next implementation checkpoint 13d changes Undo/Redo to fresh versioned
+  inverse mutations. Only then can replica merges be connected without an Undo
+  restoring obsolete sync metadata.

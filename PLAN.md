@@ -64,14 +64,17 @@ automatically while all checks are green.
       deterministic schema-v2 migration, and pure merge tests.
 - [x] 13b. Replace contiguous sibling indexes with stable position keys and
       version every store mutation at its atomic field boundary.
-- [ ] 13c. Replace snapshot-restoring Undo/Redo with freshly versioned local
-      inverse operations before accepting external merges.
-- [ ] 13d. Replace the single shared-file transport with provider-agnostic,
-      per-installation replica files inside the vault and merge file events
-      through one serialized coordinator.
-- [ ] 13e. Synchronize deterministic daily occurrences and attachment
+- [x] 13c. Replace the paid/shared-file transport design with free,
+      provider-agnostic per-installation replica files inside the ordinary
+      vault, stable local actors, and causal version vectors.
+- [ ] 13d. Replace snapshot-restoring Undo/Redo with freshly versioned local
+      inverse operations before accepting replica merges.
+- [ ] 13e. Implement replica envelopes, legacy bootstrap, per-installation
+      persistence, and vault-file reconciliation through one serialized
+      coordinator.
+- [ ] 13f. Synchronize deterministic daily occurrences and attachment
       metadata/file arrival safely through replica files.
-- [ ] 13f. Pass the two-device offline, inactive-device, iCloud, and
+- [ ] 13g. Pass the two-device offline, inactive-device, iCloud, and
       Dropbox/Remotely Save release matrix without requiring a paid service.
 - [x] 14a. Audit runtime mobile APIs, add the responsive phone presentation,
       compact Today disclosure, press-and-hold inspector popup, narrow desktop
@@ -108,11 +111,10 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 14a is complete. Phones and desktop windows at or below 720 pixels
-use a stacked Today-plus-horizontal-columns presentation. Completed Today
-tasks are collapsed behind one disclosure, task details open from a
-press-and-hold popup, and the native desktop sidebar is detached on entry to
-compact mode. Mobile runtime support is enabled for beta testing. Next, revise
-the synchronization transport around ordinary per-installation vault replica
-files, then test Dropbox through Remotely Save without requiring a paid
-service.
+Checkpoints 14a and 13c are complete. The responsive mobile beta is enabled,
+and the synchronization design now uses ordinary
+`Miller Tasks/Sync/<replica-id>.json` files rather than one replaceable
+`data.json`. Each installation writes only its own file; causal version vectors
+let the existing schema-v3 field merge distinguish sequential edits from true
+conflicts after restart. Next, replace snapshot Undo/Redo with freshly
+versioned inverse operations before connecting replica persistence.

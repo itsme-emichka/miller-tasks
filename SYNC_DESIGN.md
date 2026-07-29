@@ -1,32 +1,44 @@
 # Miller Tasks mobile synchronization design
 
-Status: accepted implementation plan
+Status: accepted revision for free provider-agnostic transport
 Date: 2026-07-29
 
-Implementation status: checkpoint 13b makes schema v3 the runtime persistence
-format. Schema-v1/v2 migration, canonical serialization, stable position keys,
-logical field versions, tombstone visibility, deterministic daily occurrence
-IDs, and the legacy-compatible UI materializer are active. External settings
-reconciliation and operation-based Undo/Redo remain checkpoint 13c work.
+Implementation status: checkpoint 13b makes schema v3 the local runtime
+persistence format, and checkpoint 14a enables the responsive mobile beta.
+Schema-v1/v2 migration, canonical serialization, stable position keys, logical
+field versions, tombstone visibility, deterministic daily occurrence IDs, and
+the legacy-compatible UI materializer are active. Per-installation replica
+files, causal merge coordination, and operation-based Undo/Redo remain the
+next synchronization work.
 
 ## Scope
 
 This document defines how Miller Tasks will synchronize task data between
 desktop and mobile Obsidian clients and how concurrent changes will converge.
-It does not implement the mobile layout. Mobile compatibility is enabled only
-after the synchronization model, attachment behavior, and touch UI pass the
-two-device test matrix.
+The responsive mobile beta is already enabled, but cross-device editing is
+released only after replica persistence, attachment behavior, and the full
+two-device test matrix pass.
 
 ## Decision summary
 
-- Obsidian or another vault synchronization service remains the transport.
-  Miller Tasks will not add an account, server, network client, or telemetry.
-- Task state remains in the plugin's `data.json` and is accessed only through
-  `Plugin.loadData()` and `Plugin.saveData()`.
+- Any service that transfers ordinary vault files may remain the transport.
+  Miller Tasks will not add an account, paid dependency, server, network
+  client, OAuth flow, or telemetry.
+- Shared task state moves from one replaceable plugin `data.json` to one
+  ordinary vault replica file per Miller Tasks installation under
+  `Miller Tasks/Sync/`.
+- Each installation writes only its own replica file. It reads and merges every
+  valid replica file, so a provider never has to merge JSON and one device
+  cannot overwrite another device's only copy.
+- The initial supported free transports are native iCloud Drive for Apple-only
+  vaults and Dropbox through the Remotely Save community plugin. The task
+  model and merge engine do not contain provider-specific code.
 - Schema v3 replaces document-level last-writer-wins behavior with a
   state-based, entity-and-field merge model.
-- Every mutable field group receives a logical version stamp. Wall-clock time
-  remains useful for task dates and display, but never decides conflicts.
+- Every mutable field group receives a causal version stamp from a stable,
+  installation-local actor. Replica version vectors determine whether changes
+  are sequential or concurrent. Wall-clock time remains useful for task dates
+  and display, but never decides conflicts.
 - Deletions are durable tombstones. Missing records are not interpreted as
   deletions.
 - Sibling order uses stable position keys instead of contiguous integer
@@ -39,10 +51,11 @@ two-device test matrix.
 - Undo/Redo remains device-local and memory-only. An Undo or Redo action is
   persisted as a new versioned task change rather than restoring old sync
   metadata.
-- External synchronization that materially changes task state clears the
+- An incoming replica merge that materially changes task state clears the
   local Undo/Redo stacks. A no-op echo of the device's own save does not.
-- `manifest.json` keeps `isDesktopOnly: true` until the synchronization engine
-  and the mobile compatibility audit are complete.
+- `manifest.json` sets `isDesktopOnly: false` for mobile beta testing.
+  Cross-device editing remains explicitly unsupported until the replica test
+  matrix passes.
 
 ## Why schema v2 is not safe for multiple devices
 
@@ -51,18 +64,19 @@ prevents two local saves from overtaking each other, but every save still
 writes one complete snapshot containing all tasks and templates.
 
 If desktop and mobile start from the same snapshot, edit different tasks
-offline, and later synchronize, the sync provider can replace the complete
-file with either device's version. The final writer can therefore erase a
-valid independent change. Comparing top-level timestamps would only choose
-which complete snapshot loses and would not solve the problem.
+offline, and later synchronize, a provider can replace one shared file with
+either device's version. The final writer can therefore erase a valid
+independent change before Miller Tasks has a chance to inspect both versions.
+Comparing top-level timestamps would only choose which complete snapshot loses
+and would not solve the problem.
 
-Schema v3 must merge below the document level before it writes a reconciled
-snapshot.
+Unique replica files remove that transport race. Schema v3 then merges below
+the document level after both files arrive.
 
 ## Guarantees
 
-When every device eventually receives the same valid snapshots, Miller Tasks
-will:
+When every device eventually receives the same valid replica files, Miller
+Tasks will:
 
 1. converge to the same task and template state on every device;
 2. retain independent edits to different records or fields;
@@ -74,43 +88,81 @@ will:
    state.
 
 Synchronization is asynchronous, not real-time collaboration. Temporary
-differences are expected while a provider is transferring files.
+differences are expected while a provider is transferring files. On iOS,
+community sync plugins run only while Obsidian is active.
 
 ## Transport and lifecycle
 
-Miller Tasks is provider-agnostic. Obsidian Sync users must enable vault
-configuration synchronization for the installed plugin and its data. Users of
-another provider must include the vault configuration directory and the
-`Miller Tasks/Attachments` folder.
+Miller Tasks stores shared files in:
 
-The plugin ID and installed folder name must both remain `miller-tasks`, which
-is required for Obsidian to deliver external settings notifications reliably.
+```text
+Miller Tasks/
+├── Sync/
+│   ├── <replica-id>.json
+│   └── <another-replica-id>.json
+└── Attachments/
+    └── <task-id>/...
+```
+
+The names are opaque random IDs. No device name, account identifier, email
+address, or provider credential enters a replica file.
+
+An installation ID is generated with `crypto.randomUUID()` and retained in
+device-local browser storage, namespaced by plugin ID and vault name. It is not
+written to a synchronized setting. If local application storage is cleared,
+the installation receives a new ID and leaves the old replica file intact;
+the state join makes that safe, and explicit replica retirement is future
+work.
+
+Every replica file has an envelope:
+
+```ts
+interface ReplicaDocument {
+  format: "miller-tasks-replica";
+  formatVersion: 1;
+  replicaId: string;
+  generation: number;
+  observed: Record<string, number>;
+  state: PluginDataV3;
+}
+```
+
+`generation` orders replacement versions of the same replica file.
+`observed` is a version vector keyed by stable actor/replica ID. It records
+which actor counters were visible when the file was written. The state remains
+the canonical schema-v3 document.
 
 The synchronization coordinator uses these boundaries:
 
-1. Local mutations enter one serialized coordinator.
-2. The coordinator advances the logical clock, applies the mutation, notifies
-   the views, and queues an immutable snapshot for `Plugin.saveData()`.
-3. `Plugin.onExternalSettingsChange()` captures the externally supplied
-   snapshot through `Plugin.loadData()`.
-4. The external snapshot is parsed and validated before it can reach the
-   store.
-5. The coordinator merges the current in-memory state, the incoming state, and
-   the last reconciled base.
-6. A material merge replaces the store state, reconciles selection, clears
-   local history, notifies all views, and saves the canonical merged snapshot.
-7. A canonical content fingerprint suppresses save-notification echo loops.
+1. On load, scan `Miller Tasks/Sync/*.json` through Obsidian `Vault` APIs,
+   validate every envelope, and merge all valid states.
+2. Local mutations enter one serialized coordinator, advance the local actor
+   counter, apply the mutation, notify views, and queue an immutable write only
+   to this installation's replica file.
+3. Listen to Obsidian vault `create`, `modify`, `rename`, and `delete` events
+   under `Miller Tasks/Sync/`, debounce provider bursts, then rescan the
+   complete replica set.
+4. Parse and validate files before they can reach the store. A malformed or
+   partially delivered file is ignored and retried; it never replaces the last
+   valid in-memory state.
+5. Merge current memory with incoming replica states and union their version
+   vectors inside the same serialized boundary as local writes.
+6. A material state merge replaces the store state, reconciles selection,
+   clears local history, notifies all views, and writes the merged state to
+   the local replica for redundancy.
+7. A vector-only or canonical no-op merge does not write. This prevents
+   devices from endlessly acknowledging each other's acknowledgement files.
 
-Capturing the incoming file and merging it must share the same serialized
-boundary as local writes. Draft text is flushed into the store before the
-merge result is committed.
+Draft text is flushed into the store before a merge result is committed.
+Replica deletion is never interpreted as task deletion; only schema-v3 entity
+tombstones delete tasks.
 
 ## Schema v3
 
-### Logical versions
+### Causal field versions
 
-Every plugin load creates a random actor ID. The document stores the maximum
-logical counter observed. A local change uses:
+Every installation has one stable random actor ID equal to its replica ID. A
+local change advances that actor's counter and uses:
 
 ```ts
 interface VersionStamp {
@@ -119,10 +171,20 @@ interface VersionStamp {
 }
 ```
 
-The next counter is one greater than the maximum counter in the current merged
-document. Stamps compare by `counter`, then by `actorId`. The actor ID is a
-deterministic tie-breaker only; it does not identify a user and is not used for
-analytics.
+The replica envelope's version vector retains the greatest observed counter
+for every actor. A field stamp is causally older when the other replica's
+vector contains at least that counter for its actor. Two different field
+values are concurrent only when neither replica has observed the other's
+stamp. Concurrent winners compare by `counter`, then by `actorId`, solely as a
+deterministic tie-breaker.
+
+Existing schema-v3 actor IDs remain valid during migration. The first replica
+envelope seeds its vector with the maximum counter observed for every legacy
+actor. Future local changes use the stable installation actor.
+
+`PluginDataV3.clock` remains the maximum informational counter present in the
+state for backward-compatible validation and canonicalization. It no longer
+implies causality across different actors.
 
 Epoch millisecond values such as `createdAt`, `updatedAt`, and `completedAt`
 retain their product meaning. They are not conflict clocks because device
@@ -256,25 +318,27 @@ mobile require independent values.
 
 ## Merge algorithm
 
-The canonical two-way state join is pure, commutative, associative, and
-idempotent for valid schema-v3 documents. The last reconciled base is used only
-to recognize concurrency and preserve a losing value; it does not change the
-canonical winner.
+The canonical state join is pure, commutative, associative, and idempotent for
+valid schema-v3 documents plus their replica version vectors. Causality comes
+from the vectors rather than a last reconciled snapshot, so conflict detection
+still works after an app restart.
 
 1. Union entities and tombstones by stable ID.
 2. Apply entity tombstones.
 3. For every surviving entity, compare each atomic field group independently.
-4. Use the higher logical stamp when only canonical state is available.
-5. When a last reconciled base is available:
-   - one changed side beats one unchanged side;
-   - equal changes collapse to one value;
-   - two different changes are concurrent and create one deduplicated conflict
-     record;
-   - the logical-stamp comparison selects the temporary visible winner.
-6. Merge attachment add entries and attachment tombstones by attachment ID.
-7. Repair the hierarchy.
-8. Derive parent completion from surviving direct children.
-9. Sort records canonically before hashing and saving.
+4. Equal field stamps and values collapse to one value.
+5. If one replica's vector has observed the other field stamp, the causal
+   successor wins without a conflict.
+6. If neither vector has observed the other stamp, two different values are
+   concurrent and create one deduplicated conflict record. Stamp comparison
+   selects the temporary visible winner.
+7. If malformed inputs claim mutual observation while retaining different
+   values, select deterministically, preserve the losing value, and record a
+   corruption conflict rather than discarding data.
+8. Merge attachment add entries and attachment tombstones by attachment ID.
+9. Repair the hierarchy.
+10. Derive parent completion from surviving direct children.
+11. Sort records canonically before hashing and saving.
 
 Conflict IDs are derived from entity ID, field group, and the two version
 stamps, so repeated delivery of the same snapshots cannot create duplicates.
@@ -286,7 +350,7 @@ stamps, so repeated delivery of the same snapshots cannot create duplicates.
 | Different tasks changed | Keep both changes |
 | Different fields of one task changed | Combine the fields |
 | Same field changed to the same value | Collapse to one value |
-| Same field changed differently | Higher stamp is visible; preserve the other value in a conflict record |
+| Same field changed differently | Causal successor wins; if concurrent, a deterministic stamp winner is visible and the other value is preserved |
 | Edit versus delete of the same entity | Delete wins; preserve the edited snapshot in a conflict record |
 | Two moves of the same task | Higher structure stamp wins; preserve the other destination |
 | New task points to a deleted parent | Move the new task to root and record the repair |
@@ -335,34 +399,75 @@ entries to user-level inverse operations:
 - Reorder and reparent Undo write a new structure version.
 
 The stacks remain bounded to 100 entries in memory and are never serialized.
-Any material external merge clears both stacks. Daily rollover and attachment
-filesystem changes retain their existing history barriers.
+Any material incoming replica merge clears both stacks. Daily rollover and
+attachment filesystem changes retain their existing history barriers.
 
 ## Invalid data and failure behavior
 
-- An invalid external snapshot never replaces valid in-memory task state.
-- The plugin pauses further persistence, shows a persistent English Notice,
-  and offers a recovery/export command instead of overwriting the invalid file.
+- An invalid replica never replaces valid in-memory task state.
+- The plugin quarantines that replica from the current merge, shows a
+  persistent English Notice, and offers a recovery/export command instead of
+  overwriting the invalid file.
 - Parse, migration, merge, hierarchy repair, and canonical serialization are
   tested independently.
 - A failed save keeps the last durable snapshot identifiable and surfaces an
   error. Retry uses the same logical versions rather than inventing duplicate
   changes.
-- Obsidian Sync settings history or the user's provider history remains the
+- The user's provider version history or a separate vault backup remains the
   recovery path for complete file corruption. Synchronization is not a backup.
 
-## Whole-file transport limitation
+## Replica-file transport safety
 
-Obsidian and third-party sync services transfer `data.json` as a whole file.
-The merge engine protects divergent snapshots that reach a running Miller
-Tasks instance, but it cannot make an unavailable version appear.
+File synchronization providers still transfer each JSON file as a whole. The
+critical difference is ownership: only the replica named by this installation
+is ever modified locally. Desktop and mobile therefore produce different
+paths, and a last-writer-wins provider never chooses between their only copies.
 
-Before mobile release, the two-device QA matrix must include an inactive-device
-overwrite test: both devices edit offline, one device closes before sync, and
-the other synchronizes first. If either valid branch cannot be delivered back
-to the plugin by Obsidian Sync and recovered through the merge path, task state
-must move to unique per-replica vault files before `isDesktopOnly` is changed.
-This is a release gate, not an accepted data-loss risk.
+A provider conflict copy with a recognizable JSON envelope is treated as
+another delivery of the declared replica. The highest valid `generation` for
+that replica is primary; divergent same-generation documents are both merged
+and produce a corruption conflict. The plugin never deletes conflict copies
+automatically.
+
+Material incoming state is absorbed into the local replica after merge. This
+provides redundancy without an acknowledgement loop because a vector-only
+change does not trigger another write.
+
+The inactive-device release test remains mandatory: both devices edit offline,
+one closes, the other synchronizes first, and both later reconnect. The test
+passes only if both unique replica files arrive and converge without recovery
+from provider history.
+
+## Dropbox through Remotely Save
+
+Miller Tasks does not call Dropbox APIs. Users install Remotely Save separately
+on each Obsidian device and authorize that plugin to use Dropbox. Miller Tasks
+requires Remotely Save to include:
+
+```text
+Miller Tasks/Sync/
+Miller Tasks/Attachments/
+```
+
+Both are ordinary vault folders, so Remotely Save's default exclusion of the
+`.obsidian` configuration directory does not exclude task replicas or images.
+Miller Tasks itself never reads Remotely Save settings or credentials.
+
+For the first-device bootstrap:
+
+1. upgrade and open Miller Tasks on the device that currently has the complete
+   task set;
+2. wait for its first replica file to be written;
+3. run Remotely Save upload on that device;
+4. install Miller Tasks and Remotely Save on the second device;
+5. download the vault, open Miller Tasks, and verify task counts before editing;
+6. thereafter synchronize before and after offline work, or enable Remotely
+   Save's supported in-app schedule.
+
+Remotely Save cannot run continuously while Obsidian is suspended on iOS.
+Miller Tasks must therefore tolerate delayed files and never claim real-time
+sync. Users must not run iCloud and Remotely Save against the same vault at the
+same time.
 
 ## Migration
 
@@ -380,22 +485,43 @@ deterministically to schema v3:
 Migration must be idempotent and produce byte-equivalent canonical data on
 desktop and mobile.
 
+The replica transport then migrates schema v3 conservatively:
+
+1. load and validate the existing plugin `data.json`;
+2. scan and validate any already-delivered replica files;
+3. if this installation has no replica, merge the legacy state with all valid
+   replicas and write the result to a new installation-owned replica file;
+4. seed the replica version vector from every version stamp in the merged
+   state;
+5. switch new durable mutations to the replica only after that write succeeds;
+6. leave `data.json` intact as a frozen migration fallback during the first
+   release rather than deleting or rewriting user data.
+
+Once the local replica exists, later startup scans treat replica files as
+authoritative and do not repeatedly import the frozen legacy snapshot.
+Upgrading a device after its old shared `data.json` was already overwritten
+cannot recover data that never reached the migration code; release instructions
+therefore require upgrading the device with the complete task set first.
+
 ## Implementation sequence
 
-1. Add schema-v3 types, canonical serialization, stamps, tombstones, and
-   deterministic v2 migration.
-2. Add pure three-way merge tests for every conflict row in this document.
-3. Replace integer sibling ordering with stable position keys.
-4. Make store mutations generate versioned field changes and operation-based
-   Undo/Redo entries.
-5. Add the external-settings coordinator, echo suppression, conflict records,
-   and history reset.
-6. Convert daily instances to deterministic occurrences.
-7. Add attachment synchronization placeholders and file-event reconciliation.
-8. Run the two-device offline, reconnect, inactive-overwrite, deletion,
-   hierarchy, daily rollover, and attachment matrix.
-9. Audit every dependency and API for iOS and Android compatibility, implement
-   the mobile layout, then set `isDesktopOnly` to `false`.
+1. Keep the completed schema-v3 types, canonical serialization, tombstones,
+   deterministic migration, stable positions, and versioned runtime store.
+2. Keep the completed responsive mobile beta available for single-device
+   testing.
+3. Make Undo/Redo emit freshly versioned inverse operations.
+4. Add the replica envelope, stable installation identity, version vectors,
+   causal field-merge tests, legacy bootstrap, and one-file-per-installation
+   persistence.
+5. Add the serialized vault-event coordinator, material-merge history reset,
+   invalid-file quarantine, and no-op write suppression.
+6. Complete deterministic daily occurrence and attachment file-arrival
+   reconciliation.
+7. Run the two-device offline, reconnect, inactive-device, deletion,
+   hierarchy, daily rollover, and attachment matrix through a local simulated
+   provider.
+8. Run the same matrix with Dropbox through Remotely Save on macOS and iOS.
+9. Complete physical-device touch and lifecycle QA.
 
 ## Release test matrix
 
@@ -411,7 +537,12 @@ The mobile flag remains blocked until these cases converge without task loss:
 - both roll over the same daily template;
 - devices are on different local calendar dates;
 - image metadata and image files arrive in either order;
-- one device remains closed while the other synchronizes a divergent file;
+- one device remains closed while the other synchronizes its divergent
+  replica;
+- the same replica arrives through create, modify, rename, duplicate conflict
+  copy, and out-of-order generation delivery;
+- Dropbox/Remotely Save sync is manually interrupted and resumed on both
+  macOS and iOS;
 - plugin reload occurs during a queued local save and an incoming sync;
 - Undo follows a remote merge and cannot erase the imported change.
 
@@ -419,9 +550,8 @@ The mobile flag remains blocked until these cases converge without task loss:
 
 The implementation follows the current Obsidian guidance:
 
-- use `Plugin.loadData()` and `Plugin.saveData()` for `data.json`;
-- respond to `Plugin.onExternalSettingsChange()` rather than polling or reading
-  the plugin directory directly;
+- use `Plugin.loadData()` only for the legacy `data.json` bootstrap;
+- use ordinary vault files and registered `Vault` events for replica state;
 - use `Platform` instead of Node or Electron platform detection;
 - keep vault file work behind Obsidian `Vault` and `FileManager` APIs;
 - use no top-level Node.js, Electron, or `FileSystemAdapter` dependency on
@@ -431,5 +561,5 @@ References:
 
 - <https://docs.obsidian.md/Reference/Manifest>
 - <https://docs.obsidian.md/oo/plugin>
-- <https://obsidian.md/help/Obsidian%2BSync/Set%2Bup%2BObsidian%2BSync>
-- <https://help.obsidian.md/Obsidian%2BSync/Version%2Bhistory>
+- <https://obsidian.md/help/sync-notes>
+- <https://github.com/remotely-save/remotely-save>
