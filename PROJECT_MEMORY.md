@@ -16,7 +16,8 @@ can resume without reconstructing architecture or product decisions.
 - Latest checkpoints: 14a responsive mobile beta, 14b BRAT beta distribution,
   13c free replica transport revision, and 13d freshly versioned Undo/Redo
   complete. Checkpoint 13e1 adds the isolated replica envelope and causal
-  version-vector merge.
+  version-vector merge; checkpoints 13e2/13e3 connect conservative replica
+  persistence and vault-event reconciliation.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -25,10 +26,9 @@ can resume without reconstructing architecture or product decisions.
 - Mobile beta: enabled with `isDesktopOnly: false`.
 - Distribution: GitHub prerelease `0.1.0` provides `main.js`, `manifest.json`,
   and `styles.css` for installation through Obsidian42 - BRAT.
-- Next work: checkpoint 13e2, implementing stable local identity,
-  conservative legacy bootstrap, and per-installation vault persistence,
-  followed by checkpoint 13e3 vault-event reconciliation and checkpoint 14c
-  physical iPhone QA.
+- Next work: checkpoint 13f daily/attachment file-arrival hardening, checkpoint
+  13g the simulated and Dropbox/Remotely Save two-device matrix, and checkpoint
+  14c physical iPhone QA.
 
 The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
 task data before registering views.
@@ -41,8 +41,8 @@ Miller columns.
 
 ```text
 MillerTasksPlugin
-├── TaskPersistence
-│   └── validated load + serialized snapshot writes
+├── ReplicaPersistence + VaultReplicaFileStore
+│   └── legacy bootstrap + installation-owned serialized replica writes
 ├── TaskAttachmentService
 │   └── vault copies, resource URLs, opening, and trash
 ├── TaskStore
@@ -51,7 +51,7 @@ MillerTasksPlugin
 │   ├── deterministic schema-v1/v2 migration + canonical serialization
 │   ├── stable position keys + legacy-compatible UI materialization
 │   ├── pure entity/field/tombstone/conflict merge
-│   └── planned causal replica envelope + version-vector merge context
+│   └── causal replica envelope + version-vector merge context
 ├── TaskSelection
 │   └── shared selected-task state
 ├── TaskDraftBuffer
@@ -85,7 +85,13 @@ MillerTasksPlugin
   `src/domain/VersionedTaskStore.ts` owns all live schema-v3 mutations.
 - `src/domain/pluginData.ts` validates stored data and normalizes user input.
 - `src/data/TaskPersistence.ts` serializes immutable snapshots through
-  `Plugin.loadData()` and `Plugin.saveData()`.
+  an injected persistence writer. Its original plugin-data implementation
+  remains for legacy tests.
+- `src/data/ReplicaPersistence.ts` owns stable replica generation/vector
+  state, conservative legacy bootstrap, serialized local writes, replica
+  scans, invalid-file quarantine, and material-change detection.
+- `src/data/VaultReplicaFileStore.ts` is the mobile-safe Obsidian `Vault` API
+  boundary for ordinary `Miller Tasks/Sync/*.json` files.
 - `src/data/TaskAttachmentService.ts` is the only boundary for image files in
   the Obsidian vault.
 - `src/state/TaskSelection.ts` synchronizes the main browser and inspector
@@ -333,15 +339,16 @@ At the end of every checkpoint:
 - `isDesktopOnly` is `false` so the compact beta can be installed on iOS.
   Physical iPhone touch, attachment, keyboard, and lifecycle QA is still
   required before a Community Plugins submission.
-- Schema v3 is live, but per-installation replica persistence and vault-event
-  reconciliation are not wired yet; this checkpoint must not be treated as
-  simultaneous multi-device support.
+- Per-installation replica persistence and vault-event reconciliation are
+  live, but Dropbox/Remotely Save and attachment arrival have not passed the
+  physical two-device release matrix. Treat synchronization as a beta until
+  those checkpoints pass.
 - Compact touch scrolling intentionally takes priority over row dragging.
   Mobile reordering needs a dedicated gesture or handle that does not block
   horizontal column swipes.
-- Undo/Redo now writes fresh schema-v3 field, tombstone, and existence
-  versions. History is still cleared by rollover and filesystem-backed image
-  operations, and future material incoming replica merges must also clear it.
+- Undo/Redo writes fresh schema-v3 field, tombstone, and existence versions.
+  History is cleared by rollover, filesystem-backed image operations, and
+  material incoming replica merges.
 
 ## Checkpoint 1 verification
 
@@ -970,3 +977,44 @@ horizontal viewport.
 - The new module is still isolated from live persistence, so this checkpoint
   cannot write or migrate user task files. Checkpoint 13e2 makes the first
   conservative local replica write.
+
+## Checkpoints 13e2/13e3 replica persistence and coordinator
+
+- A stable path-safe replica ID is retained in device-local browser storage,
+  keyed by encoded vault name. The ID is passed to `TaskStore` as its stable
+  schema-v3 actor and is never written to synchronized plugin settings.
+- On first load without any document for the local replica, the existing
+  plugin `data.json` is validated/migrated, merged with already-delivered
+  replicas, and written to `Miller Tasks/Sync/<replica-id>.json`.
+- Live durability switches only after that first write succeeds. The legacy
+  `data.json` is left byte-for-byte untouched and later loads ignore it once a
+  valid local replica exists.
+- Each local mutation advances and writes only the current installation's
+  generation. Writes remain serialized and snapshot-cloned.
+- `VaultReplicaFileStore` creates `Miller Tasks/Sync` through Obsidian `Vault`
+  APIs, reads direct JSON children, and creates/modifies only the requested
+  local path.
+- Obsidian vault create, modify, rename, and delete events under the Sync
+  folder are debounced for 800 ms and serialized. A command,
+  `Rescan synchronized task files`, exposes the same scan manually.
+- The coordinator flushes drafts, merges against the latest live store state,
+  clears history only for material incoming state, reconciles selection, and
+  writes the merged state to the local replica for redundancy.
+- A vector-only or state-identical scan does not write. Deleting another
+  device's replica file does not delete any task. Deleting the local file
+  recreates it at a newer generation.
+- Invalid remote/partial files are quarantined and retried after later events.
+  An invalid local primary file blocks persistence instead of being
+  overwritten. Failed dirty state is retried after the local file becomes
+  valid again.
+- The simulated two-replica persistence test preserves independent Mac and
+  phone tasks while keeping two ownership paths. No-op, missing-file,
+  stale-generation, invalid-file, and migration-reload cases are covered.
+- The actual test-vault `data.json` was read into an in-memory migration
+  harness without writing to the vault. Fifteen task records, five daily
+  templates, and ten daily occurrences produced one replica and remained
+  fingerprint-identical on reload.
+- One hundred twenty tests across twenty-two files pass with lint, TypeScript,
+  and the production build.
+- Next checkpoints harden daily/attachment arrival and run the same matrix
+  through Dropbox/Remotely Save on macOS and iOS.

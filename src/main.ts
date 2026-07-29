@@ -6,7 +6,12 @@ import {
   MILLER_TASKS_VIEW_TYPE,
 } from "./constants";
 import { TaskAttachmentService } from "./data/TaskAttachmentService";
-import { TaskPersistence } from "./data/TaskPersistence";
+import {
+  getOrCreateReplicaId,
+  isReplicaPath,
+  ReplicaPersistence,
+} from "./data/ReplicaPersistence";
+import { VaultReplicaFileStore } from "./data/VaultReplicaFileStore";
 import { TaskStore } from "./domain/TaskStore";
 import { TaskDraftBuffer } from "./state/TaskDraftBuffer";
 import { TaskSelection } from "./state/TaskSelection";
@@ -44,20 +49,32 @@ export default class MillerTasksPlugin extends Plugin {
   private attachmentService: TaskAttachmentService | null = null;
   private inspectorModal: MillerTaskInspectorModal | null = null;
   private inspectorActions: InspectorActions | null = null;
+  private replicaPersistence: ReplicaPersistence | null = null;
+  private replicaReconcileTimer: number | null = null;
+  private replicaReconcileQueue: Promise<void> = Promise.resolve();
+  private invalidReplicaFingerprint = "";
   private compactLayout = false;
   private readonly taskSelection = new TaskSelection();
 
   override async onload(): Promise<void> {
-    const persistence = new TaskPersistence(
-      () => this.loadData(),
-      (data) => this.saveData(data),
-    );
-
     try {
-      this.taskStore = new TaskStore(
-        await persistence.load(),
-        persistence,
+      const replicaId = getOrCreateReplicaId(
+        window.localStorage,
+        this.app.vault.getName(),
       );
+      const persistence = new ReplicaPersistence(
+        replicaId,
+        new VaultReplicaFileStore(this.app.vault),
+        () => this.loadData(),
+      );
+      this.replicaPersistence = persistence;
+      const loaded = await persistence.load();
+      this.taskStore = new TaskStore(
+        loaded.state,
+        persistence,
+        { actorId: replicaId },
+      );
+      this.reportInvalidReplicas(loaded.invalidPaths, false);
     } catch (error) {
       new Notice(
         "Miller tasks data is invalid. The plugin was not loaded to protect your tasks.",
@@ -125,6 +142,7 @@ export default class MillerTasksPlugin extends Plugin {
         TASK_ROLLOVER_INTERVAL_MS,
       ),
     );
+    this.registerReplicaEvents();
 
     this.registerView(
       MILLER_TASKS_VIEW_TYPE,
@@ -234,6 +252,14 @@ export default class MillerTasksPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "rescan-synchronized-task-files",
+      name: "Rescan synchronized task files",
+      callback: () => {
+        this.scheduleReplicaReconcile();
+      },
+    });
+
+    this.addCommand({
       id: "toggle-completed-tasks",
       name: "Toggle completed tasks",
       callback: () => {
@@ -304,7 +330,131 @@ export default class MillerTasksPlugin extends Plugin {
     }, { capture: true });
   }
 
+  private registerReplicaEvents(): void {
+    const schedulePath = (path: string): void => {
+      if (isReplicaPath(path)) {
+        this.scheduleReplicaReconcile();
+      }
+    };
+    this.registerEvent(
+      this.app.vault.on("create", (file) => {
+        schedulePath(file.path);
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("modify", (file) => {
+        schedulePath(file.path);
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("delete", (file) => {
+        schedulePath(file.path);
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("rename", (file, oldPath) => {
+        if (isReplicaPath(file.path) || isReplicaPath(oldPath)) {
+          this.scheduleReplicaReconcile();
+        }
+      }),
+    );
+  }
+
+  private scheduleReplicaReconcile(): void {
+    if (this.replicaReconcileTimer !== null) {
+      window.clearTimeout(this.replicaReconcileTimer);
+    }
+    this.replicaReconcileTimer = window.setTimeout(() => {
+      this.replicaReconcileTimer = null;
+      const reconcile = this.replicaReconcileQueue.then(() =>
+        this.reconcileReplicaFiles(),
+      );
+      this.replicaReconcileQueue = reconcile.catch(() => {
+        new Notice(
+          "Miller tasks could not reconcile synchronized files. It will retry after the next file change.",
+        );
+      });
+    }, 800);
+  }
+
+  private async reconcileReplicaFiles(): Promise<void> {
+    const persistence = this.replicaPersistence;
+    const taskStore = this.taskStore;
+    if (!persistence || !taskStore) {
+      return;
+    }
+
+    this.taskDrafts?.flushAll();
+    await taskStore.flush().catch(() => undefined);
+    const scan = await persistence.scan();
+    const result = persistence.reconcile(
+      taskStore.getSyncSnapshot(),
+      scan,
+    );
+    this.reportInvalidReplicas(
+      result.invalidPaths,
+      result.blocked,
+    );
+    if (result.blocked) {
+      return;
+    }
+
+    if (result.materialChange) {
+      if (taskStore.replaceFromSync(result.state)) {
+        const selectedTaskId =
+          this.taskSelection.getSelectedTaskId();
+        if (
+          selectedTaskId !== null &&
+          !taskStore.getTask(selectedTaskId)
+        ) {
+          this.taskSelection.setSelectedTaskId(null);
+          this.inspectorModal?.close();
+        }
+        await taskStore.flush();
+        new Notice("Miller tasks merged changes from another device.");
+      }
+      return;
+    }
+
+    if (result.localWriteRequired) {
+      await persistence.save(taskStore.getSyncSnapshot());
+    }
+  }
+
+  private reportInvalidReplicas(
+    paths: readonly string[],
+    blocked: boolean,
+  ): void {
+    const fingerprint = `${blocked ? "blocked" : "ignored"}:${[
+      ...paths,
+    ].sort().join("|")}`;
+    if (fingerprint === this.invalidReplicaFingerprint) {
+      return;
+    }
+    this.invalidReplicaFingerprint = fingerprint;
+    if (paths.length === 0) {
+      return;
+    }
+    if (blocked) {
+      new Notice(
+        "The local miller tasks sync file is invalid. Saving is paused to protect your tasks.",
+      );
+      return;
+    }
+    new Notice(
+      `${paths.length} Miller Tasks sync file${
+        paths.length === 1 ? " was" : "s were"
+      } ignored because ${
+        paths.length === 1 ? "it is" : "they are"
+      } incomplete or invalid.`,
+    );
+  }
+
   override onunload(): void {
+    if (this.replicaReconcileTimer !== null) {
+      window.clearTimeout(this.replicaReconcileTimer);
+      this.replicaReconcileTimer = null;
+    }
     this.inspectorModal?.close();
     this.inspectorModal = null;
     this.taskDrafts?.flushAll();

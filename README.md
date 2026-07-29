@@ -59,9 +59,9 @@ submission. To install it on desktop or mobile:
    plugins** and enable **Miller Tasks**.
 
 BRAT can install future Miller Tasks beta releases from the same repository.
-Cross-device task reconciliation is not connected yet. Until it is released,
-use the mobile beta with test tasks rather than expecting a Mac task database
-to appear on a phone.
+Cross-device task reconciliation is available in beta releases starting with
+version `0.1.1`, but it still requires a separate vault-file transport and
+physical two-device QA.
 
 ## Install the beta from source
 
@@ -137,6 +137,8 @@ plugins**.
   after confirmation.
 - **Miller Tasks: Undo last task change** and **Redo last task change** expose
   the same history through the command palette.
+- Run **Miller Tasks: Rescan synchronized task files** after a manual provider
+  transfer if Obsidian did not report the delivered files automatically.
 - Use **Delete task** in the right-sidebar inspector for the same behavior
   without returning focus to the task row.
 
@@ -149,42 +151,41 @@ completed row remains visible and struck through until the next local day.
 
 Undo/redo keeps up to 100 changes for the current plugin session, including
 creation, edits, completion, Today scheduling, moves, ordering, and safe
-deletion. The history is intentionally not stored in `data.json`, so it does
-not become shared task data. Undo and redo write fresh field, deletion, and
-intentional-presence versions rather than restoring an older database
-snapshot. A plugin reload, daily rollover, or an image file operation starts a
-fresh history because Obsidian's trash cannot guarantee that an image can be
-restored to its original vault path.
+deletion. The history is never serialized into replica files or the frozen
+legacy `data.json`, so it does not become shared task data. Undo and redo write
+fresh field, deletion, and intentional-presence versions rather than restoring
+an older database snapshot. A plugin reload, daily rollover, or an image file
+operation starts a fresh history because Obsidian's trash cannot guarantee
+that an image can be restored to its original vault path.
 
 ## Data and files
 
-Task records are stored by Obsidian through the plugin data API in:
+On the first replica-enabled load, Miller Tasks validates and imports the
+existing plugin data from:
 
 ```text
 .obsidian/plugins/miller-tasks/data.json
 ```
 
-The current schema uses logical field versions, stable sibling position keys,
-and deletion tombstones. Existing schema-v1 and schema-v2 data migrates
-deterministically before the first subsequent save. Cross-device
-reconciliation is not connected yet, so mobile support currently means that
-the plugin can run and be tested on a phone, not that two devices can safely
-edit the same task data simultaneously.
-
-The accepted free synchronization design will move shared state to one
-ordinary vault file per installation:
+Only after a valid local replica is written does live persistence switch to
+one ordinary vault file per installation:
 
 ```text
 Miller Tasks/Sync/<replica-id>.json
 ```
 
+The legacy `data.json` is left intact as a frozen migration fallback; Miller
+Tasks does not delete or rewrite it after the switch.
+
 Each device will write only its own file and merge all delivered replicas.
 This keeps Miller Tasks independent of a paid service or cloud account. The
 first cross-platform transport test will use the free Dropbox connection in
 the Remotely Save community plugin; Miller Tasks itself will never receive
-Dropbox credentials. The replica envelope and causal merge engine are
-implemented and tested, but vault-file persistence and event reconciliation
-are not connected yet.
+Dropbox credentials. Replica creation, modification, rename, and deletion
+events are debounced and rescanned. Invalid remote files are ignored and
+retried; an invalid local file pauses saving instead of being overwritten.
+Material incoming state clears device-local Undo/Redo and is absorbed into the
+local replica.
 
 Images are copied into the vault:
 

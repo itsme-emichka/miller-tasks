@@ -1,4 +1,6 @@
-import { TaskPersistence } from "../data/TaskPersistence";
+import type {
+  TaskPersistenceWriter,
+} from "../data/TaskPersistence";
 import {
   materializePluginDataV3,
 } from "../sync/materializeSyncData";
@@ -10,7 +12,10 @@ import {
   comparePositionKeys,
   generatePositionKeyBetween,
 } from "../sync/positionKey";
-import { parseOrMigratePluginDataV3 } from "../sync/parseSyncData";
+import {
+  parseOrMigratePluginDataV3,
+  parsePluginDataV3,
+} from "../sync/parseSyncData";
 import {
   clonePluginDataV3,
   cloneVersion,
@@ -22,6 +27,7 @@ import {
   SyncedTask,
   TaskFieldGroup,
   VersionStamp,
+  serializePluginDataV3,
 } from "../sync/syncData";
 import {
   normalizeAttachment,
@@ -94,7 +100,7 @@ export class TaskStore {
 
   constructor(
     data: unknown,
-    private readonly persistence?: TaskPersistence,
+    private readonly persistence?: TaskPersistenceWriter,
     options: TaskStoreOptions = {},
   ) {
     this.data = parseOrMigratePluginDataV3(data);
@@ -114,6 +120,23 @@ export class TaskStore {
 
   getSyncSnapshot(): PluginDataV3 {
     return clonePluginDataV3(this.data);
+  }
+
+  replaceFromSync(data: PluginDataV3): boolean {
+    const incoming = parsePluginDataV3(data);
+    if (
+      serializePluginDataV3(incoming) ===
+      serializePluginDataV3(this.data)
+    ) {
+      return false;
+    }
+
+    this.data = incoming;
+    this.undoStack.length = 0;
+    this.redoStack.length = 0;
+    this.historyBaseline = clonePluginDataV3(this.data);
+    this.notifyAndPersist();
+    return true;
   }
 
   canUndo(): boolean {

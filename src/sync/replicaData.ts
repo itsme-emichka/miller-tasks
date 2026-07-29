@@ -173,6 +173,7 @@ export function mergeVersionVectors(
 export function mergeReplicaDocuments(
   documents: readonly ReplicaDocument[],
   initialState?: PluginDataV3,
+  initialObserved: Readonly<VersionVector> = {},
 ): ReplicaMergeResult {
   const candidates = selectLatestReplicaDocuments(
     documents.map(parseReplicaDocument),
@@ -180,7 +181,10 @@ export function mergeReplicaDocuments(
   let state = initialState
     ? parsePluginDataV3(initialState)
     : createDefaultPluginDataV3();
-  let observed = collectVersionVector(state);
+  let observed = mergeVersionVectors(
+    initialObserved,
+    collectVersionVector(state),
+  );
 
   for (const document of candidates) {
     state = mergePluginDataV3(
@@ -282,8 +286,12 @@ function canonicalizeVersionVector(
   );
 }
 
+export function isValidReplicaId(replicaId: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(replicaId);
+}
+
 function validateReplicaId(replicaId: string): void {
-  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(replicaId)) {
+  if (!isValidReplicaId(replicaId)) {
     invalid("Replica ID is invalid.");
   }
 }

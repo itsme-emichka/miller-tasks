@@ -7,7 +7,12 @@ import {
 type LoadRawData = () => Promise<unknown>;
 type SaveRawData = (data: PluginDataV3) => Promise<void>;
 
-export class TaskPersistence {
+export interface TaskPersistenceWriter {
+  save(data: PluginDataV3): Promise<void>;
+  flush(): Promise<void>;
+}
+
+export class TaskPersistence implements TaskPersistenceWriter {
   private queue: Promise<void> = Promise.resolve();
   private latestSave: Promise<void> = Promise.resolve();
 

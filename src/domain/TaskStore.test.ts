@@ -530,6 +530,26 @@ describe("TaskStore", () => {
     ]);
   });
 
+  it("clears history only for a material incoming sync state", () => {
+    const store = createStore();
+    store.createTask({ title: "Local" });
+    const unchanged = store.getSyncSnapshot();
+
+    expect(store.replaceFromSync(unchanged)).toBe(false);
+    expect(store.canUndo()).toBe(true);
+
+    const remote = new TaskStore(unchanged, undefined, {
+      actorId: "remote",
+      idFactory: () => "remote-task",
+      now: () => 2_000,
+    });
+    remote.createTask({ title: "Remote" });
+
+    expect(store.replaceFromSync(remote.getSyncSnapshot())).toBe(true);
+    expect(store.canUndo()).toBe(false);
+    expect(store.getTask("remote-task")?.title).toBe("Remote");
+  });
+
   it("clears unsafe history when image files or rollover change", () => {
     const store = createStore();
     const task = store.createTask({ title: "With image" });

@@ -10,8 +10,10 @@ field versions, tombstone visibility, deterministic daily occurrence IDs, and
 the legacy-compatible UI materializer are active. Undo/Redo now applies fresh
 atomic field, tombstone, and intentional-presence versions. Canonical replica
 envelopes, version-vector validation, highest-generation selection, and causal
-state joins are also active in isolation. Per-installation vault persistence
-and event coordination remain the next synchronization work.
+state joins are active. Stable per-vault installation identity, conservative
+legacy bootstrap, one-file-per-installation vault persistence, and debounced
+vault-event reconciliation are now connected. Daily/attachment arrival
+hardening and the physical Dropbox two-device matrix remain.
 
 ## Scope
 
@@ -513,11 +515,10 @@ therefore require upgrading the device with the complete task set first.
    testing.
 3. Keep the completed freshly versioned Undo/Redo inverse operations.
 4. Keep the completed replica envelope, version-vector validation,
-   highest-generation selection, and causal field-merge tests; next add stable
-   installation identity, legacy bootstrap, and one-file-per-installation
-   persistence.
-5. Add the serialized vault-event coordinator, material-merge history reset,
-   invalid-file quarantine, and no-op write suppression.
+   highest-generation selection, stable installation identity, legacy
+   bootstrap, and one-file-per-installation persistence.
+5. Keep the completed serialized vault-event coordinator, material-merge
+   history reset, invalid-file quarantine, and no-op write suppression.
 6. Complete deterministic daily occurrence and attachment file-arrival
    reconciliation.
 7. Run the two-device offline, reconnect, inactive-device, deletion,

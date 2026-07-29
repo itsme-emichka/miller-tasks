@@ -71,9 +71,9 @@ automatically while all checks are green.
       inverse operations before accepting replica merges.
 - [x] 13e1. Add canonical replica envelopes, version-vector validation,
       highest-generation selection, and causal merge tests.
-- [ ] 13e2. Implement conservative legacy bootstrap and per-installation
+- [x] 13e2. Implement conservative legacy bootstrap and per-installation
       replica persistence through Obsidian vault files.
-- [ ] 13e3. Reconcile replica create/modify/rename/delete events through one
+- [x] 13e3. Reconcile replica create/modify/rename/delete events through one
       serialized coordinator with invalid-file quarantine and history reset.
 - [ ] 13f. Synchronize deterministic daily occurrences and attachment
       metadata/file arrival safely through replica files.
@@ -126,5 +126,8 @@ fresh atomic field, tombstone, and existence versions instead of restoring
 obsolete sync metadata. Next, implement the replica envelope, conservative
 legacy bootstrap, and per-installation persistence while the beta receives
 physical iPhone QA. The pure envelope/vector/causal-merge portion of that work
-is complete as checkpoint 13e1; checkpoint 13e2 connects it to durable vault
-files.
+is complete as checkpoint 13e1. Checkpoints 13e2 and 13e3 now connect stable
+per-vault installation identity, conservative legacy bootstrap, ordinary vault
+files, event-driven reconciliation, invalid-file quarantine, and local history
+reset. Next, complete daily/attachment arrival handling and run the real
+Dropbox/Remotely Save two-device matrix.
