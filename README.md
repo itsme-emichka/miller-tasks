@@ -182,7 +182,9 @@ Each device will write only its own file and merge all delivered replicas.
 This keeps Miller Tasks independent of a paid service or cloud account. The
 first cross-platform transport test will use the free Dropbox connection in
 the Remotely Save community plugin; Miller Tasks itself will never receive
-Dropbox credentials. These replica files are not implemented yet.
+Dropbox credentials. The replica envelope and causal merge engine are
+implemented and tested, but vault-file persistence and event reconciliation
+are not connected yet.
 
 Images are copied into the vault:
 

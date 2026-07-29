@@ -31,15 +31,23 @@ interface ConflictLocation {
 
 interface MergeContext {
   conflicts: Map<string, SyncConflict>;
+  causality?: MergeCausality;
+}
+
+export interface MergeCausality {
+  leftObserved: Readonly<Record<string, number>>;
+  rightObserved: Readonly<Record<string, number>>;
 }
 
 export function mergePluginDataV3(
   left: PluginDataV3,
   right: PluginDataV3,
   base?: PluginDataV3,
+  causality?: MergeCausality,
 ): PluginDataV3 {
   const context: MergeContext = {
     conflicts: mergeConflictMaps(left.conflicts, right.conflicts),
+    causality,
   };
   const showCompleted = mergeRegister(
     {
@@ -610,15 +618,38 @@ function mergeRegister<T>(
   const rightJson = toJsonValue(right.value);
   const valuesEqual = canonicalJson(leftJson) === canonicalJson(rightJson);
   const comparison = compareRegisters(left, right);
-  const winner = comparison >= 0 ? left : right;
-
-  if (
-    !valuesEqual &&
+  const leftObservedRight =
+    context.causality !== undefined &&
+    observesVersion(
+      context.causality.leftObserved,
+      right.version,
+    );
+  const rightObservedLeft =
+    context.causality !== undefined &&
+    observesVersion(
+      context.causality.rightObserved,
+      left.version,
+    );
+  const winner =
+    leftObservedRight && !rightObservedLeft
+      ? left
+      : rightObservedLeft && !leftObservedRight
+        ? right
+        : comparison >= 0
+          ? left
+          : right;
+  const causalConflict =
+    context.causality !== undefined &&
+    (leftObservedRight === rightObservedLeft ||
+      compareVersions(left.version, right.version) === 0);
+  const legacyConflict =
+    context.causality === undefined &&
     (compareVersions(left.version, right.version) === 0 ||
       (base !== undefined &&
         !registersEqual(left, base) &&
-        !registersEqual(right, base)))
-  ) {
+        !registersEqual(right, base)));
+
+  if (!valuesEqual && (causalConflict || legacyConflict)) {
     const conflict = createConflict(
       left,
       right,
@@ -632,6 +663,13 @@ function mergeRegister<T>(
     value: cloneRegisterValue(winner.value),
     version: cloneVersion(winner.version),
   };
+}
+
+function observesVersion(
+  observed: Readonly<Record<string, number>>,
+  version: VersionStamp,
+): boolean {
+  return (observed[version.actorId] ?? -1) >= version.counter;
 }
 
 function mergeEntities<T extends { id: string }>(

@@ -69,9 +69,12 @@ automatically while all checks are green.
       vault, stable local actors, and causal version vectors.
 - [x] 13d. Replace snapshot-restoring Undo/Redo with freshly versioned local
       inverse operations before accepting replica merges.
-- [ ] 13e. Implement replica envelopes, legacy bootstrap, per-installation
-      persistence, and vault-file reconciliation through one serialized
-      coordinator.
+- [x] 13e1. Add canonical replica envelopes, version-vector validation,
+      highest-generation selection, and causal merge tests.
+- [ ] 13e2. Implement conservative legacy bootstrap and per-installation
+      replica persistence through Obsidian vault files.
+- [ ] 13e3. Reconcile replica create/modify/rename/delete events through one
+      serialized coordinator with invalid-file quarantine and history reset.
 - [ ] 13f. Synchronize deterministic daily occurrences and attachment
       metadata/file arrival safely through replica files.
 - [ ] 13g. Pass the two-device offline, inactive-device, iCloud, and
@@ -122,4 +125,6 @@ conflicts after restart. Checkpoint 13d is also complete: Undo/Redo now applies
 fresh atomic field, tombstone, and existence versions instead of restoring
 obsolete sync metadata. Next, implement the replica envelope, conservative
 legacy bootstrap, and per-installation persistence while the beta receives
-physical iPhone QA.
+physical iPhone QA. The pure envelope/vector/causal-merge portion of that work
+is complete as checkpoint 13e1; checkpoint 13e2 connects it to durable vault
+files.

@@ -8,9 +8,10 @@ persistence format, and checkpoint 14a enables the responsive mobile beta.
 Schema-v1/v2 migration, canonical serialization, stable position keys, logical
 field versions, tombstone visibility, deterministic daily occurrence IDs, and
 the legacy-compatible UI materializer are active. Undo/Redo now applies fresh
-atomic field, tombstone, and intentional-presence versions. Per-installation
-replica files and causal merge coordination remain the next synchronization
-work.
+atomic field, tombstone, and intentional-presence versions. Canonical replica
+envelopes, version-vector validation, highest-generation selection, and causal
+state joins are also active in isolation. Per-installation vault persistence
+and event coordination remain the next synchronization work.
 
 ## Scope
 
@@ -511,8 +512,9 @@ therefore require upgrading the device with the complete task set first.
 2. Keep the completed responsive mobile beta available for single-device
    testing.
 3. Keep the completed freshly versioned Undo/Redo inverse operations.
-4. Add the replica envelope, stable installation identity, version vectors,
-   causal field-merge tests, legacy bootstrap, and one-file-per-installation
+4. Keep the completed replica envelope, version-vector validation,
+   highest-generation selection, and causal field-merge tests; next add stable
+   installation identity, legacy bootstrap, and one-file-per-installation
    persistence.
 5. Add the serialized vault-event coordinator, material-merge history reset,
    invalid-file quarantine, and no-op write suppression.

@@ -15,7 +15,8 @@ can resume without reconstructing architecture or product decisions.
 
 - Latest checkpoints: 14a responsive mobile beta, 14b BRAT beta distribution,
   13c free replica transport revision, and 13d freshly versioned Undo/Redo
-  complete.
+  complete. Checkpoint 13e1 adds the isolated replica envelope and causal
+  version-vector merge.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -24,9 +25,10 @@ can resume without reconstructing architecture or product decisions.
 - Mobile beta: enabled with `isDesktopOnly: false`.
 - Distribution: GitHub prerelease `0.1.0` provides `main.js`, `manifest.json`,
   and `styles.css` for installation through Obsidian42 - BRAT.
-- Next work: checkpoint 13e, implementing replica envelopes, conservative
-  legacy bootstrap, per-installation persistence, and vault-file
-  reconciliation, plus checkpoint 14c physical iPhone QA.
+- Next work: checkpoint 13e2, implementing stable local identity,
+  conservative legacy bootstrap, and per-installation vault persistence,
+  followed by checkpoint 13e3 vault-event reconciliation and checkpoint 14c
+  physical iPhone QA.
 
 The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
 task data before registering views.
@@ -107,6 +109,10 @@ MillerTasksPlugin
   data through deterministic migration.
 - `src/sync/positionKey.ts` creates stable lexicographic keys before, between,
   and after siblings without rewriting neighboring records.
+- `src/sync/replicaData.ts` validates and canonically serializes one
+  generation-numbered file per replica, collects/merges version vectors,
+  ignores older delivered generations, and folds latest documents through the
+  causal schema-v3 join.
 - Undo/Redo retains bounded in-memory before/after targets, but it no longer
   replaces live schema-v3 data with those targets. History application writes
   fresh versions only for changed atomic fields and uses new entity tombstone
@@ -941,3 +947,26 @@ horizontal viewport.
   tombstone, resurrection, and persistence assertions.
 - Next checkpoint 13e connects the per-installation replica envelope and
   conservative legacy bootstrap.
+
+## Checkpoint 13e1 replica envelope and causal join
+
+- `ReplicaDocument` uses format `miller-tasks-replica`, format version 1,
+  a path-safe opaque replica ID, a positive generation, a canonical observed
+  version vector, and validated schema-v3 state.
+- Parsing rejects malformed JSON, invalid IDs/generations, and vectors that
+  are behind any actor version retained in the state.
+- Canonical serialization sorts vector keys and every nested schema-v3
+  collection, producing stable bytes for no-op detection.
+- Replica folding retains only the highest delivered generation for each
+  replica. Divergent same-generation documents remain separate merge
+  candidates and preserve a same-field conflict rather than being discarded.
+- Causal register comparison uses both replicas' observed vectors. A side that
+  observed the other field version is a sequential successor; neither side
+  observing the other is concurrent and records a deterministic conflict.
+- Independent offline task creation, concurrent same-field edits,
+  causally-later edits, stale generations, divergent conflict copies, and
+  envelope validation are covered by six new tests.
+- One hundred twelve tests across twenty files pass.
+- The new module is still isolated from live persistence, so this checkpoint
+  cannot write or migrate user task files. Checkpoint 13e2 makes the first
+  conservative local replica write.
