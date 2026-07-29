@@ -32,6 +32,18 @@ export default defineConfig(
   },
   ...obsidianmd.configs.recommended,
   {
+    files: [
+      "*.mjs",
+      "*.config.ts",
+      "scripts/**/*.mjs",
+    ],
+    rules: {
+      // Build, test, and installation scripts run in Node and are never
+      // included in the mobile plugin bundle.
+      "obsidianmd/no-nodejs-modules": "off",
+    },
+  },
+  {
     files: ["scripts/**/*.mjs"],
     rules: {
       // This standalone setup script runs before an Obsidian Vault exists.

@@ -20,15 +20,31 @@ import {
   isTextEditingTarget,
   resolveTaskHistoryShortcut,
 } from "./ui/taskHistoryShortcuts";
+import type { TaskAttachmentActions } from "./ui/attachmentActions";
+import type { DailyTemplateActions } from "./ui/dailyTemplateActions";
+import type {
+  TaskInspectorPresentation,
+} from "./ui/MillerTasksApp";
+import type { TaskActions } from "./ui/taskActions";
 import { requestConfirmation } from "./view/ConfirmationModal";
+import { MillerTaskInspectorModal } from "./view/MillerTaskInspectorModal";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
 import { MillerTaskTreeView } from "./view/MillerTaskTreeView";
 import { MillerTasksView } from "./view/MillerTasksView";
+
+interface InspectorActions {
+  attachments: TaskAttachmentActions;
+  dailyTemplates: DailyTemplateActions;
+  tasks: TaskActions;
+}
 
 export default class MillerTasksPlugin extends Plugin {
   private taskStore: TaskStore | null = null;
   private taskDrafts: TaskDraftBuffer | null = null;
   private attachmentService: TaskAttachmentService | null = null;
+  private inspectorModal: MillerTaskInspectorModal | null = null;
+  private inspectorActions: InspectorActions | null = null;
+  private compactLayout = false;
   private readonly taskSelection = new TaskSelection();
 
   override async onload(): Promise<void> {
@@ -57,6 +73,43 @@ export default class MillerTasksPlugin extends Plugin {
     );
     this.taskDrafts = taskDrafts;
     this.attachmentService = attachmentService;
+    const inspectorActions: InspectorActions = {
+      attachments: {
+        addFiles: async (taskId, files) => {
+          taskDrafts.flush(taskId);
+          const result = await attachmentService.addFiles(
+            taskId,
+            files,
+          );
+          if (result.errors.length > 0) {
+            new Notice(
+              `${result.errors.length} image` +
+                `${result.errors.length === 1 ? "" : "s"} could not be added.`,
+            );
+            throw new Error("Some images could not be added.");
+          }
+        },
+        getResourceUrl: (attachment) =>
+          attachmentService.getResourceUrl(attachment),
+        openAttachment: (attachment) =>
+          attachmentService.openAttachment(attachment),
+        removeAttachment: (taskId, attachment) =>
+          this.removeAttachment(taskId, attachment),
+      },
+      dailyTemplates: {
+        deleteTemplate: (templateId, title) =>
+          this.deleteDailyTemplate(templateId, title),
+      },
+      tasks: {
+        deleteTask: async (taskId) => {
+          await this.deleteTask(taskId);
+          if (!taskStore.getTask(taskId)) {
+            this.inspectorModal?.close();
+          }
+        },
+      },
+    };
+    this.inspectorActions = inspectorActions;
     this.register(
       taskStore.subscribeToPersistenceErrors(() => {
         new Notice("Miller tasks could not save the latest changes.");
@@ -80,7 +133,7 @@ export default class MillerTasksPlugin extends Plugin {
           leaf,
           taskStore,
           (taskId) => {
-            this.selectTask(taskId);
+            this.updateTaskSelection(taskId);
           },
           {
             toggleView: () => {
@@ -88,6 +141,12 @@ export default class MillerTasksPlugin extends Plugin {
                 leaf,
                 MILLER_TASK_TREE_VIEW_TYPE,
               );
+            },
+            openInspector: (taskId, presentation) => {
+              this.openTaskInspector(taskId, presentation);
+            },
+            setCompactLayout: (compact) => {
+              this.setCompactLayout(compact);
             },
             completeTask: (taskId, completed) => {
               void this.completeTask(taskId, completed);
@@ -135,35 +194,9 @@ export default class MillerTasksPlugin extends Plugin {
           taskStore,
           this.taskSelection,
           taskDrafts,
-          {
-            addFiles: async (taskId, files) => {
-              taskDrafts.flush(taskId);
-              const result = await attachmentService.addFiles(
-                taskId,
-                files,
-              );
-              if (result.errors.length > 0) {
-                new Notice(
-                  `${result.errors.length} image` +
-                    `${result.errors.length === 1 ? "" : "s"} could not be added.`,
-                );
-                throw new Error("Some images could not be added.");
-              }
-            },
-            getResourceUrl: (attachment) =>
-              attachmentService.getResourceUrl(attachment),
-            openAttachment: (attachment) =>
-              attachmentService.openAttachment(attachment),
-            removeAttachment: (taskId, attachment) =>
-              this.removeAttachment(taskId, attachment),
-          },
-          {
-            deleteTemplate: (templateId, title) =>
-              this.deleteDailyTemplate(templateId, title),
-          },
-          {
-            deleteTask: (taskId) => this.deleteTask(taskId),
-          },
+          inspectorActions.attachments,
+          inspectorActions.dailyTemplates,
+          inspectorActions.tasks,
         ),
     );
 
@@ -191,7 +224,12 @@ export default class MillerTasksPlugin extends Plugin {
       id: "open-task-details",
       name: "Open task details",
       callback: () => {
-        void this.activateInspector();
+        const taskId = this.taskSelection.getSelectedTaskId();
+        if (this.compactLayout && taskId !== null) {
+          this.openTaskInspectorPopup(taskId);
+        } else {
+          void this.activateInspector();
+        }
       },
     });
 
@@ -267,16 +305,74 @@ export default class MillerTasksPlugin extends Plugin {
   }
 
   override onunload(): void {
+    this.inspectorModal?.close();
+    this.inspectorModal = null;
     this.taskDrafts?.flushAll();
     void this.taskStore?.flush().catch(() => undefined);
   }
 
-  private selectTask(taskId: string | null): void {
+  private updateTaskSelection(taskId: string | null): void {
     this.taskDrafts?.flushAll();
     this.taskSelection.setSelectedTaskId(taskId);
-    if (taskId !== null) {
+  }
+
+  private selectTask(taskId: string | null): void {
+    this.updateTaskSelection(taskId);
+    if (taskId !== null && !this.compactLayout) {
       void this.activateInspector();
     }
+  }
+
+  private openTaskInspector(
+    taskId: string,
+    presentation: TaskInspectorPresentation,
+  ): void {
+    if (presentation === "popup") {
+      this.openTaskInspectorPopup(taskId);
+      return;
+    }
+    this.selectTask(taskId);
+  }
+
+  private openTaskInspectorPopup(taskId: string): void {
+    const taskStore = this.taskStore;
+    const taskDrafts = this.taskDrafts;
+    const actions = this.inspectorActions;
+    if (!taskStore?.getTask(taskId) || !taskDrafts || !actions) {
+      return;
+    }
+
+    this.updateTaskSelection(taskId);
+    this.inspectorModal?.close();
+    const modal = new MillerTaskInspectorModal(
+      this.app,
+      taskStore,
+      this.taskSelection,
+      taskDrafts,
+      actions.attachments,
+      actions.dailyTemplates,
+      actions.tasks,
+      () => {
+        if (this.inspectorModal === modal) {
+          this.inspectorModal = null;
+        }
+      },
+    );
+    this.inspectorModal = modal;
+    modal.open();
+  }
+
+  private setCompactLayout(compact: boolean): void {
+    this.compactLayout = compact;
+    if (compact) {
+      for (const leaf of this.app.workspace.getLeavesOfType(
+        MILLER_TASK_INSPECTOR_VIEW_TYPE,
+      )) {
+        leaf.detach();
+      }
+      return;
+    }
+    this.inspectorModal?.close();
   }
 
   private undoTaskChange(): boolean {
@@ -325,7 +421,9 @@ export default class MillerTasksPlugin extends Plugin {
       taskStore.getTask(historyTaskId)
     ) {
       this.taskSelection.setSelectedTaskId(historyTaskId);
-      void this.activateInspector();
+      if (!this.compactLayout) {
+        void this.activateInspector();
+      }
     }
   }
 

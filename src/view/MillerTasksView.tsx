@@ -1,13 +1,23 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import {
+  ItemView,
+  Platform,
+  WorkspaceLeaf,
+} from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 
 import { MILLER_TASKS_VIEW_TYPE } from "../constants";
 import { TaskStore } from "../domain/TaskStore";
 import { MillerTasksApp } from "../ui/MillerTasksApp";
+import type { TaskInspectorPresentation } from "../ui/MillerTasksApp";
 
 interface MillerTasksActions {
   toggleView: () => void;
+  openInspector: (
+    taskId: string,
+    presentation: TaskInspectorPresentation,
+  ) => void;
+  setCompactLayout: (compact: boolean) => void;
   completeTask: (taskId: string, completed: boolean) => void;
   deleteTask: (taskId: string) => void;
   reportMoveError: (message: string) => void;
@@ -48,9 +58,12 @@ export class MillerTasksView extends ItemView {
           store={this.taskStore}
           onToggleView={this.actions.toggleView}
           onTaskSelected={this.onTaskSelected}
+          onTaskInspectorRequested={this.actions.openInspector}
+          onCompactLayoutChange={this.actions.setCompactLayout}
           onTaskCompletion={this.actions.completeTask}
           onTaskDelete={this.actions.deleteTask}
           onTaskMoveError={this.actions.reportMoveError}
+          compactLayout={Platform.isPhone ? true : undefined}
         />
       </StrictMode>,
     );

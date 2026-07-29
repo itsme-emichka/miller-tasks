@@ -5,7 +5,13 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { createDefaultPluginData } from "../domain/pluginData";
 import { TaskStore } from "../domain/TaskStore";
@@ -24,6 +30,11 @@ function createThroughInput(label: string, title: string): void {
   fireEvent.change(input, { target: { value: title } });
   fireEvent.submit(input.closest("form")!);
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 describe("MillerTasksApp", () => {
   it("keeps one shared heading and no visible column headings", () => {
@@ -181,6 +192,48 @@ describe("MillerTasksApp", () => {
     ]);
   });
 
+  it("hides completed Today tasks behind the compact disclosure", () => {
+    const store = createStore();
+    const completed = store.createTask({ title: "Finished today" });
+    store.setTaskToday(completed.id, true);
+    store.completeSubtree(completed.id, true);
+    const open = store.createTask({ title: "Open today" });
+    store.setTaskToday(open.id, true);
+    render(<MillerTasksApp store={store} compactLayout />);
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+
+    expect(
+      within(today).getByRole("button", { name: "Open today" }),
+    ).toBeVisible();
+    expect(
+      within(today).queryByRole("button", {
+        name: "Finished today",
+      }),
+    ).not.toBeInTheDocument();
+
+    const disclosure = within(today).getByRole("button", {
+      name: "Show 1 completed task",
+    });
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(disclosure);
+
+    expect(
+      within(today).getByRole("button", {
+        name: "Finished today",
+      }),
+    ).toBeVisible();
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(disclosure);
+    expect(
+      within(today).queryByRole("button", {
+        name: "Finished today",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it("adds only recursive leaf descendants when a parent enters Today", () => {
     const store = createStore();
     const parent = store.createTask({ title: "Parent" });
@@ -271,6 +324,111 @@ describe("MillerTasksApp", () => {
     expect(
       screen.getByRole("button", { name: "Test navigation" }),
     ).toBeVisible();
+  });
+
+  it("opens the sidebar on wide click and a popup on compact hold", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const store = createStore();
+    store.createTask({ title: "Inspect me" });
+    const requestInspector = vi.fn();
+    const { rerender } = render(
+      <MillerTasksApp
+        store={store}
+        compactLayout={false}
+        onTaskInspectorRequested={requestInspector}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Inspect me" }),
+    );
+    expect(requestInspector).toHaveBeenLastCalledWith(
+      "task-1",
+      "sidebar",
+    );
+
+    rerender(
+      <MillerTasksApp
+        store={store}
+        compactLayout
+        onTaskInspectorRequested={requestInspector}
+      />,
+    );
+    const title = screen.getByRole("button", { name: "Inspect me" });
+    fireEvent.click(title);
+    expect(requestInspector).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerDown(title, {
+      button: 0,
+      isPrimary: true,
+      clientX: 20,
+      clientY: 20,
+    });
+    fireEvent.pointerMove(title, {
+      isPrimary: true,
+      clientX: 40,
+      clientY: 20,
+    });
+    void act(() => vi.advanceTimersByTime(550));
+    fireEvent.pointerUp(title);
+    expect(requestInspector).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerDown(title, {
+      button: 0,
+      isPrimary: true,
+      clientX: 20,
+      clientY: 20,
+    });
+    void act(() => vi.advanceTimersByTime(549));
+    expect(requestInspector).toHaveBeenCalledTimes(1);
+    void act(() => vi.advanceTimersByTime(1));
+    fireEvent.pointerUp(title);
+    fireEvent.click(title);
+
+    expect(requestInspector).toHaveBeenCalledTimes(2);
+    expect(requestInspector).toHaveBeenLastCalledWith(
+      "task-1",
+      "popup",
+    );
+  });
+
+  it("switches compact presentation with the window width", () => {
+    const originalWidth = window.innerWidth;
+    try {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 900,
+      });
+      const { container } = render(
+        <MillerTasksApp store={createStore()} />,
+      );
+      const shell = container.querySelector(".miller-tasks-shell");
+      expect(shell).toHaveAttribute("data-compact", "false");
+
+      act(() => {
+        Object.defineProperty(window, "innerWidth", {
+          configurable: true,
+          value: 600,
+        });
+        window.dispatchEvent(new Event("resize"));
+      });
+      expect(shell).toHaveAttribute("data-compact", "true");
+
+      act(() => {
+        Object.defineProperty(window, "innerWidth", {
+          configurable: true,
+          value: 900,
+        });
+        window.dispatchEvent(new Event("resize"));
+      });
+      expect(shell).toHaveAttribute("data-compact", "false");
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalWidth,
+      });
+    }
   });
 
   it("keeps a completed row struck through until the next day", () => {

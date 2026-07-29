@@ -64,13 +64,21 @@ automatically while all checks are green.
       deterministic schema-v2 migration, and pure merge tests.
 - [x] 13b. Replace contiguous sibling indexes with stable position keys and
       version every store mutation at its atomic field boundary.
-- [ ] 13c. Add external-settings reconciliation, conflict records, save-echo
-      suppression, and operation-based local Undo/Redo.
-- [ ] 13d. Synchronize deterministic daily occurrences and attachment
-      metadata/file arrival safely.
-- [ ] 13e. Pass the two-device offline and inactive-overwrite release matrix.
-- [ ] 14. Audit mobile APIs and dependencies, implement the phone/tablet
-      presentation, and set `isDesktopOnly` to `false`.
+- [ ] 13c. Replace snapshot-restoring Undo/Redo with freshly versioned local
+      inverse operations before accepting external merges.
+- [ ] 13d. Replace the single shared-file transport with provider-agnostic,
+      per-installation replica files inside the vault and merge file events
+      through one serialized coordinator.
+- [ ] 13e. Synchronize deterministic daily occurrences and attachment
+      metadata/file arrival safely through replica files.
+- [ ] 13f. Pass the two-device offline, inactive-device, iCloud, and
+      Dropbox/Remotely Save release matrix without requiring a paid service.
+- [x] 14a. Audit runtime mobile APIs, add the responsive phone presentation,
+      compact Today disclosure, press-and-hold inspector popup, narrow desktop
+      fallback, and set `isDesktopOnly` to `false` for beta testing.
+- [ ] 14b. Complete physical iPhone touch QA, choose a mobile-safe reorder
+      gesture that does not block horizontal scrolling, and verify attachment
+      import/open/trash behavior on iOS.
 
 ## Product constraints
 
@@ -81,11 +89,15 @@ automatically while all checks are green.
   model.
 - Every task is a plain Obsidian checkbox followed by text, never a visually
   styled button or card.
-- The task inspector is a separate ItemView in Obsidian's collapsible right
-  sidebar and never consumes space inside the column browser.
-- JSON persistence through the Obsidian plugin data API.
+- On desktop, the task inspector is a separate ItemView in Obsidian's
+  collapsible right sidebar. In compact mode, it opens as a native Obsidian
+  popup only after a press-and-hold gesture.
+- Current local JSON persistence uses the Obsidian plugin data API. Shared
+  synchronization will use ordinary per-installation replica files inside the
+  vault so the transport can be iCloud, Dropbox, or another file synchronizer.
 - Provider-agnostic mobile synchronization through versioned schema-v3 task
-  state, durable deletion tombstones, and deterministic field-level merges.
+  state, durable deletion tombstones, deterministic field-level merges, and no
+  required paid account or Miller Tasks server.
 - A pinned Today projection shares the original task records; daily templates
   create isolated instances that reset at local midnight.
 - Manual ordering and drag-and-drop moves.
@@ -96,8 +108,11 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 13b is complete. Runtime persistence now uses validated schema v3,
-stable position keys, logical field versions, entity and attachment
-tombstones, and deterministic daily-occurrence IDs while exposing the existing
-view model to the UI. Next, add serialized external-settings reconciliation,
-save-echo suppression, conflict delivery, and operation-based Undo/Redo.
+Checkpoint 14a is complete. Phones and desktop windows at or below 720 pixels
+use a stacked Today-plus-horizontal-columns presentation. Completed Today
+tasks are collapsed behind one disclosure, task details open from a
+press-and-hold popup, and the native desktop sidebar is detached on entry to
+compact mode. Mobile runtime support is enabled for beta testing. Next, revise
+the synchronization transport around ordinary per-installation vault replica
+files, then test Dropbox through Remotely Save without requiring a paid
+service.

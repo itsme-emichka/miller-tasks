@@ -30,6 +30,7 @@ interface TaskInspectorAppProps {
   attachmentActions?: TaskAttachmentActions;
   dailyTemplateActions?: DailyTemplateActions;
   taskActions?: TaskActions;
+  showDailyTasks?: boolean;
 }
 
 interface TextDraft {
@@ -45,6 +46,7 @@ export function TaskInspectorApp({
   attachmentActions,
   dailyTemplateActions,
   taskActions,
+  showDailyTasks = true,
 }: TaskInspectorAppProps): JSX.Element {
   const snapshot = useTaskSnapshot(store);
   const selectedTaskId = useSelectedTaskId(selection);
@@ -70,11 +72,13 @@ export function TaskInspectorApp({
     return (
       <div className="miller-task-inspector-stack">
         <p className="miller-task-inspector-empty">Select a task.</p>
-        <DailyTasksEditor
-          store={store}
-          templates={snapshot.dailyTemplates}
-          actions={dailyTemplateActions}
-        />
+        {showDailyTasks ? (
+          <DailyTasksEditor
+            store={store}
+            templates={snapshot.dailyTemplates}
+            actions={dailyTemplateActions}
+          />
+        ) : null}
       </div>
     );
   }
@@ -349,11 +353,13 @@ export function TaskInspectorApp({
           Delete task
         </button>
       ) : null}
-      <DailyTasksEditor
-        store={store}
-        templates={snapshot.dailyTemplates}
-        actions={dailyTemplateActions}
-      />
+      {showDailyTasks ? (
+        <DailyTasksEditor
+          store={store}
+          templates={snapshot.dailyTemplates}
+          actions={dailyTemplateActions}
+        />
+      ) : null}
     </div>
   );
 }

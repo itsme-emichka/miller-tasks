@@ -2,25 +2,27 @@
 
 ## Purpose
 
-Miller Tasks is an Obsidian desktop plugin for navigating a recursive task tree
-as Miller columns. Selecting a task opens its direct children in the next
+Miller Tasks is a responsive Obsidian plugin for navigating a recursive task
+tree as Miller columns. Selecting a task opens its direct children in the next
 column. Task details live in a separate ItemView inside Obsidian's native,
-collapsible right sidebar.
+collapsible right sidebar on wide desktop windows and in a native popup after
+press-and-hold on phones and narrow desktop windows.
 
 This file is maintained after every checkpoint so a future development session
 can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 13b complete.
+- Checkpoint: 14a complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 13c, adding serialized
-  `onExternalSettingsChange()` reconciliation, save-echo suppression,
-  conflict delivery, and operation-based local Undo/Redo.
+- Mobile beta: enabled with `isDesktopOnly: false`.
+- Next work: revise `SYNC_DESIGN.md` around per-installation replica files
+  inside the ordinary vault, then add operation-based Undo/Redo and validate
+  the free Dropbox/Remotely Save transport.
 
 The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
 task data before registering views.
@@ -53,17 +55,21 @@ MillerTasksPlugin
 │   └── React root
 │       └── MillerTasksApp
 │           ├── one shared heading
-│           ├── pinned Today projection
-│           └── horizontally scrolling unlabelled tree columns
+│           ├── pinned/stacked Today projection
+│           ├── compact completed-task disclosure
+│           └── responsive horizontally scrolling unlabelled tree columns
 ├── MillerTaskTreeView (separate Obsidian ItemView)
 │   └── React root
 │       └── TaskTreeApp
 │           ├── deterministic top-down node layout
 │           └── orthogonal parent-child connections
-└── MillerTaskInspectorView (native right-sidebar ItemView)
+├── MillerTaskInspectorView (native right-sidebar ItemView)
     └── React root
         └── TaskInspectorApp
             └── DailyTasksEditor
+└── MillerTaskInspectorModal (compact native popup)
+    └── React root
+        └── TaskInspectorApp without daily-template controls
 ```
 
 - `src/main.ts` owns the Obsidian lifecycle, view registration, ribbon icon,
@@ -94,14 +100,17 @@ MillerTasksPlugin
 - `src/sync/materializeSyncData.ts` derives the unchanged schema-v2-shaped view
   snapshot, including contiguous display-only `order` values, from schema-v3
   persistence.
-- `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
+- `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React. It
+  forces compact presentation on `Platform.isPhone` and otherwise lets window
+  width select the responsive mode.
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
 - `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
   selected ancestry path, renders pinned Today plus root and selected-child
   columns, and hosts the shared `@dnd-kit` context for the tree. It also owns
-  Finder-style arrow navigation and focus restoration without moving the
-  horizontal viewport.
+  Finder-style arrow navigation, compact Today disclosure, press-and-hold
+  recognition, width-responsive presentation, and focus restoration without
+  moving the horizontal viewport.
 - `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
 - `src/ui/taskTreeLayout.ts` deterministically places complete task forests
   from top to bottom without overlaps or force simulation.
@@ -112,6 +121,8 @@ MillerTasksPlugin
   Obsidian ItemView.
 - `src/view/ConfirmationModal.ts` provides native Obsidian confirmations for
   parent completion and subtree deletion.
+- `src/view/MillerTaskInspectorModal.tsx` reuses `TaskInspectorApp` in an
+  Obsidian `Modal` for compact task details and flushes drafts on close.
 - `src/ui/TaskInspectorApp.tsx` renders task metadata and daily-template
   controls inside the native right sidebar. Date, time, priority, and flag
   save immediately.
@@ -298,11 +309,14 @@ At the end of every checkpoint:
 - This is a source beta, not an Obsidian community-plugin release. Installation
   currently requires building and copying the three artifacts.
 - The development vault is local and ignored by Git.
-- `isDesktopOnly` intentionally remains `true` until schema-v3 synchronization,
-  the two-device release matrix, the mobile API audit, and the phone/tablet UI
-  are complete.
+- `isDesktopOnly` is `false` so the compact beta can be installed on iOS.
+  Physical iPhone touch, attachment, keyboard, and lifecycle QA is still
+  required before a public mobile release.
 - Schema v3 is live, but `onExternalSettingsChange()` is not wired yet; this
   checkpoint alone must not be treated as simultaneous multi-device support.
+- Compact touch scrolling intentionally takes priority over row dragging.
+  Mobile reordering needs a dedicated gesture or handle that does not block
+  horizontal column swipes.
 - Undo/Redo still restores full schema-v3 snapshots as a desktop-only
   transition. Checkpoint 13c must replace this with freshly versioned inverse
   operations before external merges are accepted.
@@ -799,3 +813,42 @@ horizontal viewport.
   attachment, preference, template, and occurrence assertions.
 - `isDesktopOnly` remains `true`. External settings reconciliation and
   operation-based Undo/Redo are explicitly deferred to checkpoint 13c.
+
+## Checkpoint 14a responsive mobile beta
+
+- The runtime dependency audit found no Node.js, Electron,
+  `FileSystemAdapter`, `process.platform`, or regular-expression lookbehind
+  usage under `src/`. Attachment handling already uses Obsidian's mobile-safe
+  `Vault`, `FileManager`, `TFile`, and browser `File` APIs.
+- `manifest.json` now sets `isDesktopOnly` to `false` so the beta can be
+  installed in Obsidian Mobile.
+- `MillerTasksApp` always uses compact presentation on
+  `Platform.isPhone`. Desktop windows also enter it at 720 CSS pixels or
+  narrower and return to the unchanged wide presentation after resizing.
+- Compact presentation stacks a bounded, independently scrollable Today
+  section above the manually controlled horizontal Miller viewport. Columns
+  leave a narrow preview of the next level instead of adding tutorial copy or
+  decoration.
+- Completed Today tasks are excluded from the compact list by default. A
+  sticky, centered chevron at the bottom reveals or collapses them without
+  changing the shared task state or the desktop Today projection.
+- A 550 ms stationary press on a Today or hierarchy title opens the selected
+  task in `MillerTaskInspectorModal`. Moving more than 10 CSS pixels cancels
+  the gesture so horizontal and vertical touch scrolling remain native.
+- Entering compact mode detaches the native right-sidebar inspector. Normal
+  compact taps navigate only; wide desktop clicks continue to open the
+  sidebar exactly as before.
+- The compact popup reuses all task metadata, deletion, and attachment
+  behavior from `TaskInspectorApp` but omits the unrelated daily-template
+  editor.
+- One hundred three tests across nineteen files pass. New assertions cover
+  compact Today disclosure, wide sidebar versus compact popup requests,
+  automatic window-width switching, and popup inspector content.
+- Physical iPhone testing remains checkpoint 14b. In particular, choose and
+  test a touch reorder interaction separately; row surfaces currently favor
+  native panning so the required horizontal column swipe is never trapped.
+- The synchronization requirement changed after checkpoint 13b: paid
+  Obsidian Sync is not acceptable. The next design revision must keep schema
+  v3 merge semantics but move shared state to per-installation ordinary vault
+  files that can be transported by iCloud, Dropbox/Remotely Save, or another
+  file synchronizer.

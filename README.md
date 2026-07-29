@@ -1,9 +1,10 @@
 # Miller Tasks
 
-Miller Tasks is a desktop task tracker for Obsidian. It turns one recursive
-task tree into horizontally scrolling Miller columns and keeps task details in
-Obsidian's native, collapsible right sidebar. A separate structured Tree View
-shows the complete hierarchy from top-level parents down to their children.
+Miller Tasks is a desktop and mobile task tracker for Obsidian. It turns one
+recursive task tree into horizontally scrolling Miller columns. Task details
+use Obsidian's native, collapsible right sidebar on desktop and a native popup
+on phones. A separate structured Tree View shows the complete hierarchy from
+top-level parents down to their children.
 
 The design is deliberately minimal: one shared heading, an always-pinned Today
 column, unlabelled hierarchy columns, and the same background as the active
@@ -35,8 +36,13 @@ Obsidian theme.
   Obsidian's trash.
 - Confirm cascade completion, task deletion, and image removal.
 - Preserve the selected path after valid moves and reloads.
+- Stack Today above the horizontal hierarchy on phones and narrow desktop
+  windows while leaving the wide desktop layout unchanged.
+- Hide completed Today tasks by default in compact mode and reveal them from
+  one small disclosure at the bottom of the section.
 
-Miller Tasks is desktop-only and requires Obsidian 1.8.0 or newer.
+Miller Tasks requires Obsidian 1.8.0 or newer. Mobile support is currently a
+beta and still requires physical-device touch and attachment QA.
 
 ## Install the beta from source
 
@@ -79,6 +85,14 @@ plugins**.
 - Type into **New task** and press Enter. Selecting the new row opens its
   subtask column.
 - Click a row to select it. Double-click it, or press F2, to rename it.
+- On a phone, tap a task to navigate its children and press and hold the task
+  to open its details in a popup. The desktop right-sidebar inspector is not
+  opened in compact mode.
+- Compact mode is always active on phones and also activates when a desktop
+  window is 720 pixels wide or narrower. Today moves above the hierarchy, and
+  the visible edge of the next column indicates horizontal scrolling.
+- Completed Today tasks are hidden by default in compact mode. Use the small
+  arrow at the bottom of Today to reveal or collapse them.
 - Press Delete or Backspace on a selected row to remove it immediately when
   it has no subtasks. A task with subtasks asks before deleting the subtree.
 - Press Cmd/Ctrl+Z while focus is inside Miller Tasks to undo the latest task
@@ -131,9 +145,10 @@ Task records are stored by Obsidian through the plugin data API in:
 
 The current schema uses logical field versions, stable sibling position keys,
 and deletion tombstones. Existing schema-v1 and schema-v2 data migrates
-deterministically before the first subsequent save. The plugin remains
-desktop-only while external sync reconciliation and mobile UI work are still
-under development.
+deterministically before the first subsequent save. Cross-device
+reconciliation is not connected yet, so mobile support currently means that
+the plugin can run and be tested on a phone, not that two devices can safely
+edit the same task data simultaneously.
 
 Images are copied into the vault:
 
@@ -153,8 +168,8 @@ rollover runs on plugin load and once per minute while Obsidian is open.
 
 The beta intentionally excludes general recurrence rules, reminders,
 notifications, time zones, smart lists, multiple lists, search, arbitrary
-custom properties, and mobile UI. Daily tasks are the only automatic
-re-creation rule.
+custom properties, and built-in cloud transport. Daily tasks are the only
+automatic re-creation rule.
 
 ## Develop
 

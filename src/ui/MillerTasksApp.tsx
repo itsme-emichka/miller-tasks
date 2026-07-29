@@ -25,6 +25,7 @@ import {
 import type {
   JSX,
   KeyboardEvent,
+  PointerEvent as ReactPointerEvent,
   SyntheticEvent,
 } from "react";
 
@@ -48,11 +49,19 @@ interface MillerTasksAppProps {
   store: TaskStore;
   onToggleView?: () => void;
   onTaskSelected?: (taskId: string | null) => void;
+  onTaskInspectorRequested?: (
+    taskId: string,
+    presentation: TaskInspectorPresentation,
+  ) => void;
+  onCompactLayoutChange?: (compact: boolean) => void;
   onTaskCompletion?: (taskId: string, completed: boolean) => void;
   onTaskDelete?: (taskId: string) => void;
   onTaskMoveError?: (message: string) => void;
   clock?: () => number;
+  compactLayout?: boolean;
 }
+
+export type TaskInspectorPresentation = "sidebar" | "popup";
 
 interface ColumnState {
   depth: number;
@@ -77,16 +86,33 @@ export function MillerTasksApp({
   store,
   onToggleView,
   onTaskSelected,
+  onTaskInspectorRequested,
+  onCompactLayoutChange,
   onTaskCompletion,
   onTaskDelete,
   onTaskMoveError,
   clock = Date.now,
+  compactLayout,
 }: MillerTasksAppProps): JSX.Element {
+  const detectedCompactLayout = useCompactLayout();
+  const isCompact = compactLayout ?? detectedCompactLayout;
   const snapshot = useTaskSnapshot(store);
   const now = useCurrentMinute(clock);
   const todayTasks = useMemo(
     () => store.getTodayTasks(now),
     [now, snapshot, store],
+  );
+  const [showCompletedToday, setShowCompletedToday] = useState(false);
+  const completedTodayCount = useMemo(
+    () => todayTasks.filter((task) => task.completed).length,
+    [todayTasks],
+  );
+  const visibleTodayTasks = useMemo(
+    () =>
+      isCompact && !showCompletedToday
+        ? todayTasks.filter((task) => !task.completed)
+        : todayTasks,
+    [isCompact, showCompletedToday, todayTasks],
   );
   const taskTitleById = useMemo(
     () =>
@@ -112,6 +138,16 @@ export function MillerTasksApp({
   useEffect(() => {
     onTaskSelected?.(selectedPath.at(-1) ?? null);
   }, [onTaskSelected, selectedPath]);
+
+  useEffect(() => {
+    if (!isCompact) {
+      setShowCompletedToday(false);
+    }
+  }, [isCompact]);
+
+  useEffect(() => {
+    onCompactLayoutChange?.(isCompact);
+  }, [isCompact, onCompactLayoutChange]);
 
   useEffect(() => {
     if (!focusRequest) {
@@ -163,6 +199,9 @@ export function MillerTasksApp({
       taskId,
     ]);
     onTaskSelected?.(taskId);
+    if (!isCompact) {
+      onTaskInspectorRequested?.(taskId, "sidebar");
+    }
   };
 
   const createTask = (
@@ -176,6 +215,21 @@ export function MillerTasksApp({
       created.id,
     ]);
     onTaskSelected?.(created.id);
+    if (!isCompact) {
+      onTaskInspectorRequested?.(created.id, "sidebar");
+    }
+  };
+
+  const selectTodayTask = (taskId: string): void => {
+    onTaskSelected?.(taskId);
+    if (!isCompact) {
+      onTaskInspectorRequested?.(taskId, "sidebar");
+    }
+  };
+
+  const openCompactInspector = (taskId: string): void => {
+    onTaskSelected?.(taskId);
+    onTaskInspectorRequested?.(taskId, "popup");
   };
 
   const handleDragEnd = (event: DragEndEvent): void => {
@@ -256,7 +310,10 @@ export function MillerTasksApp({
   };
 
   return (
-    <main className="miller-tasks-shell">
+    <main
+      className="miller-tasks-shell"
+      data-compact={isCompact}
+    >
       <MillerViewHeader
         mode="columns"
         onToggleView={onToggleView}
@@ -267,11 +324,12 @@ export function MillerTasksApp({
           aria-label="Tasks for today"
         >
           <div className="miller-tasks-list">
-            {todayTasks.map((task, index) => (
+            {visibleTodayTasks.map((task, index) => (
               <Fragment key={task.id}>
                 {task.dailyTemplateId !== null &&
                 index > 0 &&
-                todayTasks[index - 1]?.dailyTemplateId === null ? (
+                visibleTodayTasks[index - 1]?.dailyTemplateId ===
+                  null ? (
                   <div
                     className="miller-today-divider"
                     role="separator"
@@ -284,17 +342,49 @@ export function MillerTasksApp({
                       ? null
                       : taskTitleById.get(task.parentId) ?? null
                   }
-                  onSelect={() => onTaskSelected?.(task.id)}
+                  compact={isCompact}
+                  onSelect={() => selectTodayTask(task.id)}
+                  onOpenInspector={() =>
+                    openCompactInspector(task.id)
+                  }
                   onTaskCompletion={completeTask}
                   onDelete={() => onTaskDelete?.(task.id)}
                 />
               </Fragment>
             ))}
-            {todayTasks.length === 0 ? (
-              <p className="miller-today-empty">No tasks for today</p>
+            {visibleTodayTasks.length === 0 ? (
+              <p className="miller-today-empty">
+                {isCompact && completedTodayCount > 0
+                  ? "No open tasks for today"
+                  : "No tasks for today"}
+              </p>
             ) : null}
           </div>
+          {isCompact && completedTodayCount > 0 ? (
+            <button
+              type="button"
+              className="miller-today-completed-toggle"
+              data-expanded={showCompletedToday}
+              aria-expanded={showCompletedToday}
+              aria-label={
+                showCompletedToday
+                  ? "Hide completed tasks"
+                  : `Show ${completedTodayCount} completed ${
+                      completedTodayCount === 1 ? "task" : "tasks"
+                    }`
+              }
+              onClick={() =>
+                setShowCompletedToday((current) => !current)
+              }
+            >
+              <ChevronIcon />
+            </button>
+          ) : null}
         </section>
+        <div
+          className="miller-mobile-workspace-divider"
+          aria-hidden="true"
+        />
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -323,6 +413,8 @@ export function MillerTasksApp({
                 onToggleToday={(taskId, today) =>
                   store.setTaskToday(taskId, today)
                 }
+                compact={isCompact}
+                onOpenInspector={openCompactInspector}
                 store={store}
               />
             ))}
@@ -336,7 +428,9 @@ export function MillerTasksApp({
 interface TodayTaskRowProps {
   task: TaskRecord;
   parentTitle: string | null;
+  compact: boolean;
   onSelect: () => void;
+  onOpenInspector: () => void;
   onTaskCompletion: (taskId: string, completed: boolean) => void;
   onDelete: () => void;
 }
@@ -344,10 +438,13 @@ interface TodayTaskRowProps {
 function TodayTaskRow({
   task,
   parentTitle,
+  compact,
   onSelect,
+  onOpenInspector,
   onTaskCompletion,
   onDelete,
 }: TodayTaskRowProps): JSX.Element {
+  const longPress = useLongPress(compact, onOpenInspector);
   const handleTitleKeyDown = (
     event: KeyboardEvent<HTMLSpanElement>,
   ): void => {
@@ -381,6 +478,7 @@ function TodayTaskRow({
           className="miller-task-title"
           role="button"
           tabIndex={0}
+          {...longPress}
           onClick={(event) => {
             event.currentTarget.focus({ preventScroll: true });
             onSelect();
@@ -414,6 +512,8 @@ interface TaskColumnProps {
   onTaskCompletion: (taskId: string, completed: boolean) => void;
   onTaskDelete?: (taskId: string) => void;
   onToggleToday: (taskId: string, today: boolean) => void;
+  compact: boolean;
+  onOpenInspector: (taskId: string) => void;
   onKeyboardNavigate: (
     direction: KeyboardNavigation,
     task: TaskRecord,
@@ -437,6 +537,8 @@ function TaskColumn({
   onTaskCompletion,
   onTaskDelete,
   onToggleToday,
+  compact,
+  onOpenInspector,
   onKeyboardNavigate,
   store,
 }: TaskColumnProps): JSX.Element {
@@ -476,6 +578,8 @@ function TaskColumn({
               onDelete={() => onTaskDelete?.(task.id)}
               todaySelected={store.isTaskScheduledForToday(task.id)}
               onToggleToday={onToggleToday}
+              compact={compact}
+              onOpenInspector={() => onOpenInspector(task.id)}
               onKeyboardNavigate={(direction) =>
                 onKeyboardNavigate(
                   direction,
@@ -513,6 +617,8 @@ interface TaskRowProps {
   onDelete: () => void;
   todaySelected: boolean;
   onToggleToday: (taskId: string, today: boolean) => void;
+  compact: boolean;
+  onOpenInspector: () => void;
   onKeyboardNavigate: (direction: KeyboardNavigation) => void;
   store: TaskStore;
 }
@@ -530,10 +636,13 @@ function TaskRow({
   onDelete,
   todaySelected,
   onToggleToday,
+  compact,
+  onOpenInspector,
   onKeyboardNavigate,
   store,
 }: TaskRowProps): JSX.Element {
   const [draftTitle, setDraftTitle] = useState(task.title);
+  const longPress = useLongPress(compact, onOpenInspector);
   const {
     attributes,
     listeners,
@@ -650,6 +759,7 @@ function TaskRow({
       ) : (
         <span
           className="miller-task-title"
+          {...longPress}
           onClick={(event) => {
             event.currentTarget.focus({ preventScroll: true });
             onSelect();
@@ -691,6 +801,14 @@ function TodayIcon({ active }: { active: boolean }): JSX.Element {
       ) : (
         <path d="M12 12v6M9 15h6" />
       )}
+    </svg>
+  );
+}
+
+function ChevronIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m7 10 5 5 5-5" />
     </svg>
   );
 }
@@ -753,6 +871,119 @@ function useCurrentMinute(clock: () => number): number {
   }, [clock]);
 
   return now;
+}
+
+const COMPACT_LAYOUT_MAX_WIDTH = 720;
+const LONG_PRESS_DELAY_MS = 550;
+const LONG_PRESS_MOVE_TOLERANCE = 10;
+
+function useCompactLayout(): boolean {
+  const [compact, setCompact] = useState(
+    () => window.innerWidth <= COMPACT_LAYOUT_MAX_WIDTH,
+  );
+
+  useEffect(() => {
+    const update = (): void => {
+      setCompact(window.innerWidth <= COMPACT_LAYOUT_MAX_WIDTH);
+    };
+
+    update();
+    window.addEventListener("resize", update);
+
+    return () => {
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return compact;
+}
+
+interface LongPressHandlers {
+  onPointerDownCapture: (
+    event: ReactPointerEvent<HTMLElement>,
+  ) => void;
+  onPointerMoveCapture: (
+    event: ReactPointerEvent<HTMLElement>,
+  ) => void;
+  onPointerUpCapture: () => void;
+  onPointerCancelCapture: () => void;
+  onClickCapture: (event: ReactPointerEvent<HTMLElement>) => void;
+  onContextMenu: (event: ReactPointerEvent<HTMLElement>) => void;
+}
+
+function useLongPress(
+  enabled: boolean,
+  onLongPress: () => void,
+): LongPressHandlers {
+  const timer = useRef<number | null>(null);
+  const startPoint = useRef<{ x: number; y: number } | null>(null);
+  const suppressClick = useRef(false);
+  const callback = useRef(onLongPress);
+
+  useEffect(() => {
+    callback.current = onLongPress;
+  }, [onLongPress]);
+
+  const clearTimer = (): void => {
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    startPoint.current = null;
+  };
+
+  useEffect(() => clearTimer, []);
+
+  return {
+    onPointerDownCapture: (event) => {
+      if (
+        !enabled ||
+        event.button > 0 ||
+        event.isPrimary === false
+      ) {
+        return;
+      }
+      clearTimer();
+      suppressClick.current = false;
+      startPoint.current = {
+        x: event.clientX,
+        y: event.clientY,
+      };
+      timer.current = window.setTimeout(() => {
+        timer.current = null;
+        startPoint.current = null;
+        suppressClick.current = true;
+        callback.current();
+      }, LONG_PRESS_DELAY_MS);
+    },
+    onPointerMoveCapture: (event) => {
+      const start = startPoint.current;
+      if (
+        start &&
+        Math.hypot(
+          event.clientX - start.x,
+          event.clientY - start.y,
+        ) > LONG_PRESS_MOVE_TOLERANCE
+      ) {
+        clearTimer();
+      }
+    },
+    onPointerUpCapture: clearTimer,
+    onPointerCancelCapture: clearTimer,
+    onClickCapture: (event) => {
+      if (!suppressClick.current) {
+        return;
+      }
+      suppressClick.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    onContextMenu: (event) => {
+      if (enabled) {
+        event.preventDefault();
+      }
+    },
+  };
 }
 
 function buildColumns(selectedPath: readonly string[]): ColumnState[] {

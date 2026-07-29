@@ -20,6 +20,7 @@ function renderInspector(
   attachmentActions?: TaskAttachmentActions,
   dailyTemplateActions?: DailyTemplateActions,
   taskActions?: TaskActions,
+  showDailyTasks = true,
 ): {
   store: TaskStore;
   selection: TaskSelection;
@@ -47,6 +48,7 @@ function renderInspector(
       attachmentActions={attachmentActions}
       dailyTemplateActions={dailyTemplateActions}
       taskActions={taskActions}
+      showDailyTasks={showDailyTasks}
     />,
   );
   return { store, selection, drafts, taskId: task.id };
@@ -131,6 +133,15 @@ describe("TaskInspectorApp", () => {
     expect(
       screen.getByRole("region", { name: "Daily tasks" }),
     ).toBeVisible();
+  });
+
+  it("keeps daily controls out of the compact task popup", () => {
+    renderInspector(undefined, undefined, undefined, false);
+
+    expect(screen.getByText("Ship beta")).toBeVisible();
+    expect(
+      screen.queryByRole("region", { name: "Daily tasks" }),
+    ).not.toBeInTheDocument();
   });
 
   it("creates, renames, and delegates deletion of daily tasks", async () => {
