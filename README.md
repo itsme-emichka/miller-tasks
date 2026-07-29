@@ -6,9 +6,9 @@ use Obsidian's native, collapsible right sidebar on desktop and a native popup
 on phones. A separate structured Tree View shows the complete hierarchy from
 top-level parents down to their children.
 
-The design is deliberately minimal: one shared heading, an always-pinned Today
-column, unlabelled hierarchy columns, and the same background as the active
-Obsidian theme.
+The design is deliberately minimal: one shared heading, a pinned desktop Today
+column, an edge-revealed Today sheet on compact screens, unlabelled hierarchy
+columns, and the same background as the active Obsidian theme.
 
 > Beta status: the first complete prototype is ready for testing. The data
 > format is versioned, but compatibility is not guaranteed before 1.0.
@@ -36,10 +36,11 @@ Obsidian theme.
   Obsidian's trash.
 - Confirm cascade completion, task deletion, and image removal.
 - Preserve the selected path after valid moves and reloads.
-- Stack Today above the horizontal hierarchy on phones and narrow desktop
-  windows while leaving the wide desktop layout unchanged.
+- Keep the horizontal hierarchy full-height on phones and narrow desktop
+  windows while Today rests in a bottom sheet that expands to 80% of the
+  screen.
 - Hide completed Today tasks by default in compact mode and reveal them from
-  one small disclosure at the bottom of the section.
+  one small disclosure inside the expanded sheet.
 
 Miller Tasks requires Obsidian 1.8.0 or newer. Mobile support is currently a
 beta and still requires physical-device touch and attachment QA.
@@ -61,7 +62,7 @@ submission. To install it on desktop or mobile:
 BRAT can install future Miller Tasks beta releases from the same repository.
 Cross-device task reconciliation is available in beta releases starting with
 version `0.1.1`, but it still requires a separate vault-file transport and
-physical two-device QA.
+remains in beta while offline conflict and attachment-arrival cases are tested.
 
 ## Install the beta from source
 
@@ -108,10 +109,14 @@ plugins**.
   to open its details in a popup. The desktop right-sidebar inspector is not
   opened in compact mode.
 - Compact mode is always active on phones and also activates when a desktop
-  window is 720 pixels wide or narrower. Today moves above the hierarchy, and
-  the visible edge of the next column indicates horizontal scrolling.
-- Completed Today tasks are hidden by default in compact mode. Use the small
-  arrow at the bottom of Today to reveal or collapse them.
+  window is 720 pixels wide or narrower. The hierarchy occupies the complete
+  workspace, and the visible edge of the next column indicates horizontal
+  scrolling.
+- Today appears as a small bottom handle in compact mode. Tap it or swipe it
+  upward to open the 80%-height sheet; tap it or swipe it downward to return
+  to the hierarchy.
+- Completed Today tasks are hidden by default in compact mode. Open Today and
+  use the small arrow at the bottom of the sheet to reveal or collapse them.
 - Press Delete or Backspace on a selected row to remove it immediately when
   it has no subtasks. A task with subtasks asks before deleting the subtree.
 - Press Cmd/Ctrl+Z while focus is inside Miller Tasks to undo the latest task

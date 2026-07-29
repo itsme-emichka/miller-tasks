@@ -203,6 +203,18 @@ describe("MillerTasksApp", () => {
     const today = screen.getByRole("region", {
       name: "Tasks for today",
     });
+    const sheetHandle = within(today).getByRole("button", {
+      name: "Open Today, 1 open task",
+    });
+
+    expect(today).toHaveAttribute("data-open", "false");
+    expect(sheetHandle).toHaveAttribute("aria-expanded", "false");
+    expect(
+      today.querySelector(".miller-today-sheet-content"),
+    ).toHaveAttribute("aria-hidden", "true");
+    fireEvent.click(sheetHandle);
+    expect(today).toHaveAttribute("data-open", "true");
+    expect(sheetHandle).toHaveAttribute("aria-expanded", "true");
 
     expect(
       within(today).getByRole("button", { name: "Open today" }),
@@ -232,6 +244,77 @@ describe("MillerTasksApp", () => {
         name: "Finished today",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens and closes the compact Today sheet by swipe", () => {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const store = createStore();
+    const task = store.createTask({ title: "Swipe target" });
+    store.setTaskToday(task.id, true);
+    const { container } = render(
+      <MillerTasksApp store={store} compactLayout />,
+    );
+    const today = screen.getByRole("region", {
+      name: "Tasks for today",
+    });
+    const handle = within(today).getByRole("button", {
+      name: "Open Today, 1 open task",
+    });
+    const columns = container.querySelector(".miller-tasks-columns");
+
+    expect(today).toHaveAttribute("data-open", "false");
+    expect(columns?.parentElement).toBe(
+      container.querySelector(".miller-tasks-workspace"),
+    );
+    expect(
+      container.querySelector(".miller-mobile-workspace-divider"),
+    ).toBeNull();
+
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      isPrimary: true,
+      pointerId: 1,
+      clientY: 700,
+    });
+    fireEvent.pointerMove(handle, {
+      isPrimary: true,
+      pointerId: 1,
+      clientY: 620,
+    });
+    fireEvent.pointerUp(handle, {
+      isPrimary: true,
+      pointerId: 1,
+      clientY: 620,
+    });
+
+    expect(today).toHaveAttribute("data-open", "true");
+    expect(handle).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(today).getByRole("button", { name: "Swipe target" }),
+    ).toBeVisible();
+
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      isPrimary: true,
+      pointerId: 2,
+      clientY: 200,
+    });
+    fireEvent.pointerMove(handle, {
+      isPrimary: true,
+      pointerId: 2,
+      clientY: 280,
+    });
+    fireEvent.pointerUp(handle, {
+      isPrimary: true,
+      pointerId: 2,
+      clientY: 280,
+    });
+
+    expect(today).toHaveAttribute("data-open", "false");
+    expect(handle).toHaveAttribute("aria-expanded", "false");
+    expect(
+      today.querySelector(".miller-today-sheet-content"),
+    ).toHaveAttribute("aria-hidden", "true");
   });
 
   it("adds only recursive leaf descendants when a parent enters Today", () => {

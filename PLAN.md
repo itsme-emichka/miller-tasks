@@ -86,6 +86,9 @@ automatically while all checks are green.
 - [x] 14a. Audit runtime mobile APIs, add the responsive phone presentation,
       compact Today disclosure, press-and-hold inspector popup, narrow desktop
       fallback, and set `isDesktopOnly` to `false` for beta testing.
+- [x] 14a1. Replace the stacked compact Today section with a draggable bottom
+      sheet that peeks from the lower edge, snaps at 80% screen height, and
+      leaves the horizontal Miller viewport full-height.
 - [x] 14b. Publish an installable `0.1.0` GitHub beta release with the three
       Obsidian assets so the mobile build can be installed through BRAT.
 - [x] 14b1. Publish the replica-synchronization beta as GitHub prerelease
@@ -130,6 +133,8 @@ versions instead of restoring obsolete synchronization metadata. Checkpoint
 13g1 also passed on physical macOS and iPhone installations through free
 Dropbox/Remotely Save transport: initial download, phone creation, Mac editing,
 and phone deletion all propagated in both directions while two valid replica
-files remained independent. Next, complete daily/attachment arrival hardening,
-the offline and inactive-device conflict matrix, and the remaining physical
-iPhone touch QA.
+files remained independent. Checkpoint 14a1 replaces the stacked mobile Today
+section with a native-theme bottom sheet, leaving the hierarchy full-height
+and horizontally scrollable behind it. Next, publish that layout for physical
+iPhone gesture QA, then complete daily/attachment arrival hardening and the
+offline and inactive-device conflict matrix.

@@ -249,6 +249,14 @@
   background: var(--background-primary);
 }
 
+.miller-today-sheet-handle {
+  display: none;
+}
+
+.miller-today-sheet-content {
+  min-height: 100%;
+}
+
 .miller-today-empty {
   margin: 0;
   padding: 0.55rem 1rem 0.55rem 2.35rem;
@@ -303,10 +311,6 @@
 
 .miller-today-completed-toggle[data-expanded="true"] svg {
   transform: rotate(180deg);
-}
-
-.miller-mobile-workspace-divider {
-  display: none;
 }
 
 .miller-tasks-columns {
@@ -776,6 +780,7 @@
 
 .miller-tasks-shell[data-compact="true"] {
   --miller-column-width: max(15rem, calc(100% - 2.5rem));
+  --miller-today-sheet-peek: 3.25rem;
   min-width: 0;
 }
 
@@ -786,39 +791,155 @@
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-tasks-workspace {
+  position: relative;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-today-column {
+  --miller-today-sheet-drag: 0px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  height: auto;
-  max-height: min(42vh, 18rem);
+  height: min(80dvh, calc(100% - 0.5rem));
+  max-height: none;
+  overflow: hidden;
+  border-top: 1px solid var(--background-modifier-border);
   border-right: 0;
-  overscroll-behavior-y: contain;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  box-shadow: 0 -0.45rem 1.25rem rgb(0 0 0 / 0.12);
+  transform: translateY(
+    calc(
+      100% - var(--miller-today-sheet-peek) +
+        var(--miller-today-sheet-drag)
+    )
+  );
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .miller-tasks-shell[data-compact="true"]
-  .miller-today-column
+  .miller-today-column[data-open="true"] {
+  transform: translateY(var(--miller-today-sheet-drag));
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-column[data-dragging="true"] {
+  transition: none;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-handle {
+  display: grid;
+  flex: 0 0 var(--miller-today-sheet-peek);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: 0.4rem minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  height: var(--miller-today-sheet-peek);
+  margin: 0;
+  padding: 0.35rem 1rem 0.45rem;
+  border: 0;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  color: var(--text-normal);
+  background: var(--background-primary);
+  box-shadow: none;
+  font-family: var(--font-interface);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-handle:active {
+  cursor: grabbing;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-handle:hover,
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-handle:focus-visible {
+  color: var(--interactive-accent);
+  background: var(--background-primary);
+  box-shadow: none;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-handle:focus-visible {
+  outline: 1px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-grip {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: 2.25rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: var(--background-modifier-border-hover);
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-label {
+  grid-row: 2;
+  grid-column: 2;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  letter-spacing: -0.01em;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-count {
+  grid-row: 2;
+  grid-column: 3;
+  justify-self: start;
+  margin-left: 0.45rem;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--background-modifier-border);
+  overscroll-behavior-y: contain;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-today-sheet-content
   .miller-tasks-list {
   min-height: 0;
 }
 
-.miller-tasks-shell[data-compact="true"]
-  .miller-mobile-workspace-divider {
-  display: block;
-  background: var(--background-modifier-border);
-}
-
 .miller-tasks-shell[data-compact="true"] .miller-tasks-columns {
   width: 100%;
+  height: 100%;
   min-height: 0;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-tasks-column {
+  overflow-y: auto;
+  scroll-padding-bottom: var(--miller-today-sheet-peek);
   scroll-snap-align: start;
+}
+
+.miller-tasks-shell[data-compact="true"]
+  .miller-tasks-column
+  .miller-tasks-list {
+  padding-bottom: var(--miller-today-sheet-peek);
 }
 
 .miller-tasks-shell[data-compact="true"] .miller-task-row,
@@ -858,7 +979,8 @@ body.is-mobile .miller-task-inspector-modal .modal-content {
 
 @media (prefers-reduced-motion: reduce) {
   .miller-task-row,
-  .miller-today-completed-toggle svg {
+  .miller-today-completed-toggle svg,
+  .miller-today-column {
     transition: none !important;
   }
 }

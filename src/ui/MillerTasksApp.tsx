@@ -23,9 +23,12 @@ import {
   useState,
 } from "react";
 import type {
+  CSSProperties,
   JSX,
   KeyboardEvent,
+  MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
+  RefObject,
   SyntheticEvent,
 } from "react";
 
@@ -103,10 +106,12 @@ export function MillerTasksApp({
     [now, snapshot, store],
   );
   const [showCompletedToday, setShowCompletedToday] = useState(false);
+  const [todaySheetOpen, setTodaySheetOpen] = useState(false);
   const completedTodayCount = useMemo(
     () => todayTasks.filter((task) => task.completed).length,
     [todayTasks],
   );
+  const openTodayCount = todayTasks.length - completedTodayCount;
   const visibleTodayTasks = useMemo(
     () =>
       isCompact && !showCompletedToday
@@ -128,6 +133,16 @@ export function MillerTasksApp({
   const [focusRequest, setFocusRequest] =
     useState<FocusRequest | null>(null);
   const columnsElement = useRef<HTMLDivElement | null>(null);
+  const todaySheetElement = useRef<HTMLElement | null>(null);
+  const todaySheetHandleElement =
+    useRef<HTMLButtonElement | null>(null);
+  const todaySheetContentElement = useRef<HTMLDivElement | null>(null);
+  const todaySheetGesture = useTodaySheetGesture(
+    todaySheetOpen,
+    setTodaySheetOpen,
+    todaySheetElement,
+    todaySheetHandleElement,
+  );
 
   useEffect(() => {
     setSelectedPath((currentPath) =>
@@ -142,8 +157,17 @@ export function MillerTasksApp({
   useEffect(() => {
     if (!isCompact) {
       setShowCompletedToday(false);
+      setTodaySheetOpen(false);
     }
   }, [isCompact]);
+
+  useEffect(() => {
+    const content = todaySheetContentElement.current;
+    if (!content) {
+      return;
+    }
+    content.inert = isCompact && !todaySheetOpen;
+  }, [isCompact, todaySheetOpen]);
 
   useEffect(() => {
     onCompactLayoutChange?.(isCompact);
@@ -320,71 +344,115 @@ export function MillerTasksApp({
       />
       <div className="miller-tasks-workspace">
         <section
-          className="miller-today-column"
+          ref={todaySheetElement}
+          className="miller-today-column miller-today-sheet"
           aria-label="Tasks for today"
+          data-open={todaySheetOpen}
+          data-dragging={todaySheetGesture.dragging}
+          style={
+            {
+              "--miller-today-sheet-drag": `${todaySheetGesture.dragOffset}px`,
+            } as CSSProperties
+          }
         >
-          <div className="miller-tasks-list">
-            {visibleTodayTasks.map((task, index) => (
-              <Fragment key={task.id}>
-                {task.dailyTemplateId !== null &&
-                index > 0 &&
-                visibleTodayTasks[index - 1]?.dailyTemplateId ===
-                  null ? (
-                  <div
-                    className="miller-today-divider"
-                    role="separator"
-                  />
-                ) : null}
-                <TodayTaskRow
-                  task={task}
-                  parentTitle={
-                    task.parentId === null
-                      ? null
-                      : taskTitleById.get(task.parentId) ?? null
-                  }
-                  compact={isCompact}
-                  onSelect={() => selectTodayTask(task.id)}
-                  onOpenInspector={() =>
-                    openCompactInspector(task.id)
-                  }
-                  onTaskCompletion={completeTask}
-                  onDelete={() => onTaskDelete?.(task.id)}
-                />
-              </Fragment>
-            ))}
-            {visibleTodayTasks.length === 0 ? (
-              <p className="miller-today-empty">
-                {isCompact && completedTodayCount > 0
-                  ? "No open tasks for today"
-                  : "No tasks for today"}
-              </p>
-            ) : null}
-          </div>
-          {isCompact && completedTodayCount > 0 ? (
+          {isCompact ? (
             <button
+              ref={todaySheetHandleElement}
               type="button"
-              className="miller-today-completed-toggle"
-              data-expanded={showCompletedToday}
-              aria-expanded={showCompletedToday}
+              className="miller-today-sheet-handle"
+              aria-controls="miller-today-sheet-content"
+              aria-expanded={todaySheetOpen}
               aria-label={
-                showCompletedToday
-                  ? "Hide completed tasks"
-                  : `Show ${completedTodayCount} completed ${
-                      completedTodayCount === 1 ? "task" : "tasks"
+                todaySheetOpen
+                  ? "Close Today"
+                  : `Open Today${
+                      openTodayCount > 0
+                        ? `, ${openTodayCount} open ${
+                            openTodayCount === 1 ? "task" : "tasks"
+                          }`
+                        : ""
                     }`
               }
-              onClick={() =>
-                setShowCompletedToday((current) => !current)
-              }
+              {...todaySheetGesture.handlers}
             >
-              <ChevronIcon />
+              <span
+                className="miller-today-sheet-grip"
+                aria-hidden="true"
+              />
+              <span className="miller-today-sheet-label">Today</span>
+              <span
+                className="miller-today-sheet-count"
+                aria-hidden="true"
+              >
+                {openTodayCount}
+              </span>
             </button>
           ) : null}
+          <div
+            ref={todaySheetContentElement}
+            id="miller-today-sheet-content"
+            className="miller-today-sheet-content"
+            aria-hidden={isCompact && !todaySheetOpen}
+          >
+            <div className="miller-tasks-list">
+              {visibleTodayTasks.map((task, index) => (
+                <Fragment key={task.id}>
+                  {task.dailyTemplateId !== null &&
+                  index > 0 &&
+                  visibleTodayTasks[index - 1]?.dailyTemplateId ===
+                    null ? (
+                    <div
+                      className="miller-today-divider"
+                      role="separator"
+                    />
+                  ) : null}
+                  <TodayTaskRow
+                    task={task}
+                    parentTitle={
+                      task.parentId === null
+                        ? null
+                        : taskTitleById.get(task.parentId) ?? null
+                    }
+                    compact={isCompact}
+                    onSelect={() => selectTodayTask(task.id)}
+                    onOpenInspector={() =>
+                      openCompactInspector(task.id)
+                    }
+                    onTaskCompletion={completeTask}
+                    onDelete={() => onTaskDelete?.(task.id)}
+                  />
+                </Fragment>
+              ))}
+              {visibleTodayTasks.length === 0 ? (
+                <p className="miller-today-empty">
+                  {isCompact && completedTodayCount > 0
+                    ? "No open tasks for today"
+                    : "No tasks for today"}
+                </p>
+              ) : null}
+            </div>
+            {isCompact && completedTodayCount > 0 ? (
+              <button
+                type="button"
+                className="miller-today-completed-toggle"
+                data-expanded={showCompletedToday}
+                aria-expanded={showCompletedToday}
+                aria-label={
+                  showCompletedToday
+                    ? "Hide completed tasks"
+                    : `Show ${completedTodayCount} completed ${
+                        completedTodayCount === 1 ? "task" : "tasks"
+                      }`
+                }
+                onClick={() =>
+                  setShowCompletedToday((current) => !current)
+                }
+              >
+                <ChevronIcon />
+              </button>
+            ) : null}
+          </div>
         </section>
-        <div
-          className="miller-mobile-workspace-divider"
-          aria-hidden="true"
-        />
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -876,6 +944,153 @@ function useCurrentMinute(clock: () => number): number {
 const COMPACT_LAYOUT_MAX_WIDTH = 720;
 const LONG_PRESS_DELAY_MS = 550;
 const LONG_PRESS_MOVE_TOLERANCE = 10;
+const TODAY_SHEET_MOVE_TOLERANCE = 6;
+const TODAY_SHEET_SWIPE_THRESHOLD = 48;
+const TODAY_SHEET_FLICK_VELOCITY = 0.5;
+
+interface TodaySheetGestureHandlers {
+  onPointerDown: (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => void;
+  onPointerMove: (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => void;
+  onPointerUp: (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => void;
+  onPointerCancel: (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => void;
+  onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
+}
+
+interface TodaySheetGestureResult {
+  handlers: TodaySheetGestureHandlers;
+  dragOffset: number;
+  dragging: boolean;
+}
+
+interface TodaySheetGestureState {
+  pointerId: number;
+  startY: number;
+  startTime: number;
+  travel: number;
+  openAtStart: boolean;
+  moved: boolean;
+}
+
+function useTodaySheetGesture(
+  open: boolean,
+  onOpenChange: (open: boolean) => void,
+  sheetElement: RefObject<HTMLElement | null>,
+  handleElement: RefObject<HTMLButtonElement | null>,
+): TodaySheetGestureResult {
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const gesture = useRef<TodaySheetGestureState | null>(null);
+  const suppressClick = useRef(false);
+
+  const finishGesture = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    cancelled: boolean,
+  ): void => {
+    const current = gesture.current;
+    if (!current || current.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const displacement = event.clientY - current.startY;
+    const elapsed = Math.max(1, event.timeStamp - current.startTime);
+    const velocity = displacement / elapsed;
+    const threshold = Math.min(
+      72,
+      Math.max(TODAY_SHEET_SWIPE_THRESHOLD, current.travel * 0.15),
+    );
+    let nextOpen = current.openAtStart;
+
+    if (!cancelled && current.moved) {
+      if (
+        displacement <= -threshold ||
+        velocity <= -TODAY_SHEET_FLICK_VELOCITY
+      ) {
+        nextOpen = true;
+      } else if (
+        displacement >= threshold ||
+        velocity >= TODAY_SHEET_FLICK_VELOCITY
+      ) {
+        nextOpen = false;
+      }
+      suppressClick.current = true;
+    }
+
+    if (
+      event.currentTarget.hasPointerCapture?.(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    gesture.current = null;
+    setDragOffset(0);
+    setDragging(false);
+    onOpenChange(nextOpen);
+  };
+
+  return {
+    dragOffset,
+    dragging,
+    handlers: {
+      onPointerDown: (event) => {
+        if (event.button > 0 || event.isPrimary === false) {
+          return;
+        }
+        const sheetHeight =
+          sheetElement.current?.getBoundingClientRect().height ?? 0;
+        const handleHeight =
+          handleElement.current?.getBoundingClientRect().height ?? 0;
+        suppressClick.current = false;
+        gesture.current = {
+          pointerId: event.pointerId,
+          startY: event.clientY,
+          startTime: event.timeStamp,
+          travel: Math.max(0, sheetHeight - handleHeight),
+          openAtStart: open,
+          moved: false,
+        };
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        event.currentTarget.focus({ preventScroll: true });
+        setDragOffset(0);
+        setDragging(true);
+      },
+      onPointerMove: (event) => {
+        const current = gesture.current;
+        if (!current || current.pointerId !== event.pointerId) {
+          return;
+        }
+        const displacement = event.clientY - current.startY;
+        if (
+          Math.abs(displacement) > TODAY_SHEET_MOVE_TOLERANCE
+        ) {
+          current.moved = true;
+        }
+        setDragOffset(
+          current.openAtStart
+            ? Math.min(current.travel, Math.max(0, displacement))
+            : Math.max(-current.travel, Math.min(0, displacement)),
+        );
+      },
+      onPointerUp: (event) => finishGesture(event, false),
+      onPointerCancel: (event) => finishGesture(event, true),
+      onClick: (event) => {
+        if (suppressClick.current) {
+          suppressClick.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        onOpenChange(!open);
+      },
+    },
+  };
+}
 
 function useCompactLayout(): boolean {
   const [compact, setCompact] = useState(

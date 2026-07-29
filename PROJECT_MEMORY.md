@@ -17,7 +17,8 @@ can resume without reconstructing architecture or product decisions.
   distribution, 13c free replica transport revision, 13d freshly versioned
   Undo/Redo, and 13e1 through 13e3 live replica persistence are complete.
   Checkpoint 13g1 validates the first physical Dropbox/Remotely Save
-  macOS-to-iPhone matrix.
+  macOS-to-iPhone matrix. Checkpoint 14a1 moves compact Today into a draggable
+  bottom sheet over full-height Miller columns.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -134,9 +135,10 @@ MillerTasksPlugin
 - `src/ui/MillerTasksApp.tsx` subscribes to the injected store, owns the
   selected ancestry path, renders pinned Today plus root and selected-child
   columns, and hosts the shared `@dnd-kit` context for the tree. It also owns
-  Finder-style arrow navigation, compact Today disclosure, press-and-hold
-  recognition, width-responsive presentation, and focus restoration without
-  moving the horizontal viewport.
+  Finder-style arrow navigation, the compact Today bottom-sheet gesture,
+  completed-task disclosure, press-and-hold recognition, width-responsive
+  presentation, and focus restoration without moving the horizontal
+  viewport.
 - `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
 - `src/ui/taskTreeLayout.ts` deterministically places complete task forests
   from top to bottom without overlaps or force simulation.
@@ -340,9 +342,9 @@ At the end of every checkpoint:
   Physical iPhone touch, attachment, keyboard, and lifecycle QA is still
   required before a Community Plugins submission.
 - Per-installation replica persistence and vault-event reconciliation are
-  live, but Dropbox/Remotely Save and attachment arrival have not passed the
-  physical two-device release matrix. Treat synchronization as a beta until
-  those checkpoints pass.
+  live, and the basic Dropbox/Remotely Save create/edit/delete matrix passed
+  on Mac and iPhone. Offline conflicts, inactive-device recovery, and
+  attachment arrival remain beta release gates.
 - Compact touch scrolling intentionally takes priority over row dragging.
   Mobile reordering needs a dedicated gesture or handle that does not block
   horizontal column swipes.
@@ -854,10 +856,11 @@ horizontal viewport.
 - `MillerTasksApp` always uses compact presentation on
   `Platform.isPhone`. Desktop windows also enter it at 720 CSS pixels or
   narrower and return to the unchanged wide presentation after resizing.
-- Compact presentation stacks a bounded, independently scrollable Today
-  section above the manually controlled horizontal Miller viewport. Columns
-  leave a narrow preview of the next level instead of adding tutorial copy or
-  decoration.
+- Compact presentation originally stacked a bounded, independently scrollable
+  Today section above the manually controlled horizontal Miller viewport.
+  Checkpoint 14a1 supersedes that layout with the bottom sheet documented
+  below. Columns still leave a narrow preview of the next level instead of
+  adding tutorial copy or decoration.
 - Completed Today tasks are excluded from the compact list by default. A
   sticky, centered chevron at the bottom reveals or collapses them without
   changing the shared task state or the desktop Today projection.
@@ -881,6 +884,35 @@ horizontal viewport.
   v3 merge semantics but move shared state to per-installation ordinary vault
   files that can be transported by iCloud, Dropbox/Remotely Save, or another
   file synchronizer.
+
+## Checkpoint 14a1 compact Today bottom sheet
+
+- Compact Today no longer consumes a grid row above the hierarchy. The Miller
+  viewport begins at the top of the workspace, uses its complete height, and
+  preserves manual horizontal scrolling with a narrow preview of the next
+  column.
+- Today is an edge-revealed bottom sheet. Its closed state exposes one
+  3.25-rem native-theme handle with an open-task count; its open state covers
+  80% of the dynamic viewport and leaves the upper hierarchy visible.
+- Tapping the handle toggles the sheet. A vertical pointer gesture follows the
+  finger, then snaps open or closed using distance and velocity thresholds.
+  Pointer capture keeps the gesture stable after the finger leaves the handle.
+- The drag target is limited to the handle so Today's vertical task scrolling
+  and the hierarchy's horizontal panning do not compete with the sheet.
+- The sheet uses Obsidian background, border, radius, text, and accent
+  variables without a dimming backdrop or a separate decorative palette.
+  Reduced-motion preferences remove the snap transition.
+- Closed sheet content is inert and hidden from the accessibility tree.
+  The handle exposes `aria-expanded` and controls the labelled Today region.
+- Completed Today tasks remain hidden by default and use the existing
+  disclosure after the sheet opens. Long press continues to open the compact
+  inspector popup.
+- Compact hierarchy columns now scroll vertically on their own and reserve
+  bottom scroll padding equal to the closed handle, so the final task input
+  can move above the sheet without reducing the viewport.
+- Twenty-two focused `MillerTasksApp` tests pass, including tap state,
+  swipe-up, swipe-down, full-workspace hierarchy structure, completed-task
+  disclosure, and press-and-hold inspector behavior.
 
 ## Checkpoint 13c free replica transport revision
 
