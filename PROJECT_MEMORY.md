@@ -12,13 +12,15 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 11 complete.
+- Checkpoint: 13 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: user testing and issue-driven Tree View refinement.
+- Next work: checkpoint 13a, implementing schema-v3 version stamps,
+  tombstones, canonical serialization, deterministic schema-v2 migration, and
+  pure merge tests from `SYNC_DESIGN.md`.
 
 The plugin loads and migrates validated schema-v1 or schema-v2 task data before
 registering views.
@@ -176,6 +178,26 @@ represented by `parentId`; depth is derived and never stored.
 - Preserve `schemaVersion` for future migrations.
 - Task timestamps are epoch milliseconds.
 - Due date and time remain local strings and are never timezone-converted.
+- The current schema-v2 whole-document save queue is safe only inside one
+  plugin process. It is not the mobile conflict strategy because two devices
+  can overwrite independent complete snapshots.
+- The accepted schema-v3 design is state-based and merges versioned atomic
+  fields, stable structural positions, entity tombstones, attachment
+  add/remove entries, and deterministic daily occurrences.
+- Logical version stamps, not wall-clock timestamps, resolve conflicts.
+- Same-field concurrent values produce a synchronized conflict record rather
+  than silently discarding the losing value.
+- Tombstones remain indefinitely until a future acknowledged-replica garbage
+  collection protocol exists.
+- Normal field edits cannot resurrect a tombstoned entity. Only a direct local
+  Undo without trashed attachments may write a newer intentional-presence
+  stamp for the same ID.
+- `Plugin.onExternalSettingsChange()` will feed validated incoming snapshots
+  through the same serialized boundary as local saves.
+- A material external merge clears local Undo/Redo; an echo/no-op does not.
+- The inactive-device overwrite scenario is a release gate. If Obsidian Sync
+  cannot deliver both branches to the merge engine, task state must move to
+  unique per-replica vault files before mobile support is enabled.
 - Images are copied to
   `Miller Tasks/Attachments/<task-id>/<attachment-id>-<safe-name>`.
 - The attachment record is added only after `Vault.createBinary()` succeeds.
@@ -255,6 +277,11 @@ At the end of every checkpoint:
 - This is a source beta, not an Obsidian community-plugin release. Installation
   currently requires building and copying the three artifacts.
 - The development vault is local and ignored by Git.
+- `isDesktopOnly` intentionally remains `true` until schema-v3 synchronization,
+  the two-device release matrix, the mobile API audit, and the phone/tablet UI
+  are complete.
+- Schema v2 still writes one complete `data.json` snapshot and must not be
+  treated as conflict-safe across simultaneously edited devices.
 
 ## Checkpoint 1 verification
 
@@ -665,3 +692,27 @@ horizontal viewport.
 - Native text input Undo remains excluded exactly as before.
 - Seventy-one tests across fourteen files, lint, TypeScript, and the
   production build pass.
+
+## Checkpoint 13 synchronization design
+
+- `SYNC_DESIGN.md` is the accepted source of truth for mobile data
+  synchronization and conflict behavior.
+- Obsidian or another vault synchronization provider remains transport; Miller
+  Tasks adds no account, backend, direct network client, or telemetry.
+- Schema v3 will version task fields at atomic boundaries, retain deletion
+  tombstones, use stable position keys, and merge incoming external settings
+  deterministically.
+- Concurrent edits to different fields combine. Same-field divergence chooses
+  a deterministic visible value and preserves the other value in a conflict
+  record.
+- Merge repair rescues new children of deleted parents, breaks concurrent
+  cycles, and preserves the 10-level limit without deleting surviving tasks.
+- Daily instances become deterministic occurrences keyed by template ID and
+  local date, preventing duplicate same-day instances across devices.
+- Attachment metadata tolerates files arriving later through the sync
+  provider; missing files never cause destructive metadata cleanup.
+- Undo/Redo remains bounded, device-local, and absent from synchronized data.
+  Under schema v3, Undo and Redo emit fresh versioned mutations instead of
+  restoring obsolete sync metadata.
+- `isDesktopOnly` stays `true` until the complete two-device matrix passes and
+  mobile API, dependency, touch, and layout work is verified.

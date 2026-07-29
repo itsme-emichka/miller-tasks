@@ -58,26 +58,45 @@ automatically while all checks are green.
 - [x] 12. Add bounded session-local Undo/Redo for task mutations, Obsidian
       commands, and view-scoped keyboard shortcuts.
 - [x] 12a. Keep Undo/Redo active after deleting the focused DOM row.
+- [x] 13. Design the mobile synchronization, conflict, migration, attachment,
+      daily-occurrence, and release-gate strategy.
+- [ ] 13a. Add schema-v3 version stamps, tombstones, canonical serialization,
+      deterministic schema-v2 migration, and pure merge tests.
+- [ ] 13b. Replace contiguous sibling indexes with stable position keys and
+      version every store mutation at its atomic field boundary.
+- [ ] 13c. Add external-settings reconciliation, conflict records, save-echo
+      suppression, and operation-based local Undo/Redo.
+- [ ] 13d. Synchronize deterministic daily occurrences and attachment
+      metadata/file arrival safely.
+- [ ] 13e. Pass the two-device offline and inactive-overwrite release matrix.
+- [ ] 14. Audit mobile APIs and dependencies, implement the phone/tablet
+      presentation, and set `isDesktopOnly` to `false`.
 
 ## Product constraints
 
 - One task tree, with root tasks at depth 1 and a maximum depth of 10.
-- Desktop-only, English UI, one shared heading, unlabelled columns, a uniform
-  Obsidian background, and no decorative interface elements.
+- English UI, one shared heading, unlabelled columns, a uniform Obsidian
+  background, and no decorative interface elements. Desktop behavior remains
+  unchanged while phone and tablet layouts are added behind the same task
+  model.
 - Every task is a plain Obsidian checkbox followed by text, never a visually
   styled button or card.
 - The task inspector is a separate ItemView in Obsidian's collapsible right
   sidebar and never consumes space inside the column browser.
 - JSON persistence through the Obsidian plugin data API.
+- Provider-agnostic mobile synchronization through versioned schema-v3 task
+  state, durable deletion tombstones, and deterministic field-level merges.
 - A pinned Today projection shares the original task records; daily templates
   create isolated instances that reset at local midnight.
 - Manual ordering and drag-and-drop moves.
 - Tasks completed today stay struck through in the tree; older completed tasks
   are hidden by default and available through a global toggle.
-- No recurrence, reminders, time zones, smart lists, multiple lists, search,
-  arbitrary properties, or mobile UI in v1.
+- No recurrence, reminders, timezone conversion, smart lists, multiple lists,
+  search, arbitrary properties, custom sync account, or Miller Tasks server.
 
 ## Current checkpoint
 
-Checkpoint 12a is complete. Miller Tasks keeps its bounded local history and
-now retains keyboard Undo/Redo after deleting the currently focused task row.
+Checkpoint 13 is complete. The accepted synchronization design is documented
+in `SYNC_DESIGN.md`. Next, implement schema-v3 stamps, tombstones, deterministic
+migration, canonical serialization, and the pure merge engine before changing
+the desktop-only manifest flag.
