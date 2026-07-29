@@ -93,6 +93,8 @@ automatically while all checks are green.
       Obsidian assets so the mobile build can be installed through BRAT.
 - [x] 14b1. Publish the replica-synchronization beta as GitHub prerelease
       `0.1.1` so existing BRAT installations can update on Mac and iPhone.
+- [x] 14b2. Publish the compact Today bottom-sheet redesign as GitHub
+      prerelease `0.1.2` for physical iPhone and narrow-window testing.
 - [ ] 14c. Complete physical iPhone touch QA, choose a mobile-safe reorder
       gesture that does not block horizontal scrolling, and verify attachment
       import/open/trash behavior on iOS.

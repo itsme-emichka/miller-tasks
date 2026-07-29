@@ -1,6 +1,6 @@
 {
   "name": "miller-tasks",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A Miller columns task tracker for Obsidian.",
   "main": "main.js",
   "type": "module",

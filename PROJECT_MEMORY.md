@@ -22,11 +22,12 @@ can resume without reconstructing architecture or product decisions.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
-- Plugin version: `0.1.1`.
+- Plugin version: `0.1.2`.
 - Minimum Obsidian version: `1.8.0`.
 - Mobile beta: enabled with `isDesktopOnly: false`.
-- Distribution: GitHub prerelease `0.1.1` provides the replica-sync beta as
-  `main.js`, `manifest.json`, and `styles.css` through Obsidian42 - BRAT.
+- Distribution: GitHub prerelease `0.1.2` provides the replica-sync beta and
+  compact Today bottom sheet as `main.js`, `manifest.json`, and `styles.css`
+  through Obsidian42 - BRAT.
 - Next work: checkpoint 13f daily/attachment file-arrival hardening, checkpoint
   13g2 offline/inactive-device conflict and resurrection testing through
   Dropbox, and checkpoint 14c physical iPhone touch and attachment QA.
@@ -1089,3 +1090,13 @@ horizontal viewport.
 - The remaining release gate is checkpoint 13g2: exercise offline concurrent
   edits, a long-inactive device, delete-versus-edit resurrection rules, and
   recovery after interrupted file delivery through the same Dropbox setup.
+
+## Checkpoint 14b2 compact Today beta distribution
+
+- Version `0.1.2` publishes checkpoint 14a1 through the existing BRAT
+  repository entry for Mac, iPhone, and narrow-window physical QA.
+- The prerelease contains exactly the production `main.js`, `manifest.json`,
+  and `styles.css` assets built after the complete verification command passes.
+- The release changes compact presentation only. Desktop Today, task data,
+  replica synchronization, and the device-local Undo/Redo boundary remain
+  unchanged.
