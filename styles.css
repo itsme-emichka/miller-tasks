@@ -8,6 +8,15 @@
   font-family: var(--font-interface);
 }
 
+.miller-task-tree-view {
+  height: 100%;
+  padding: 0 !important;
+  overflow: hidden;
+  color: var(--text-normal);
+  background: var(--background-primary);
+  font-family: var(--font-interface);
+}
+
 .miller-tasks-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -16,7 +25,16 @@
   background: var(--background-primary);
 }
 
-.miller-tasks-shell h1 {
+.miller-task-tree-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-width: 24rem;
+  background: var(--background-primary);
+}
+
+.miller-tasks-shell h1,
+.miller-task-tree-shell h1 {
   min-height: 3.5rem;
   margin: 0;
   padding: 1rem 1.25rem;
@@ -27,6 +45,96 @@
   font-size: 1.15rem;
   font-weight: var(--font-semibold);
   letter-spacing: -0.02em;
+}
+
+.miller-task-tree-viewport {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--background-primary);
+  overscroll-behavior: contain;
+}
+
+.miller-task-tree-canvas {
+  position: relative;
+  min-height: 100%;
+  margin: 0 auto;
+  background: var(--background-primary);
+}
+
+.miller-task-tree-edges {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.miller-task-tree-edges path {
+  fill: none;
+  stroke: var(--background-modifier-border-hover);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.miller-task-tree-node {
+  position: absolute;
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr);
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  color: var(--text-normal);
+  background: var(--background-primary);
+}
+
+.miller-task-tree-title {
+  min-width: 0;
+  padding: 0.25rem 0.35rem;
+  overflow: hidden;
+  color: var(--text-normal);
+  font: inherit;
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.miller-task-tree-title:focus-visible {
+  color: var(--interactive-accent);
+  outline: none;
+}
+
+.miller-task-tree-node[data-completed="true"]
+  .miller-task-tree-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.miller-task-tree-node[data-overdue="true"]
+  .miller-task-tree-title {
+  color: var(--text-error);
+}
+
+.miller-task-tree-node[data-selected="true"]
+  .miller-task-tree-title {
+  color: var(--interactive-accent);
+  text-decoration-line: underline;
+  text-decoration-color: var(--interactive-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.miller-task-tree-node[data-selected="true"][data-completed="true"]
+  .miller-task-tree-title {
+  text-decoration-line: underline line-through;
+}
+
+.miller-task-tree-empty {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
 }
 
 .miller-tasks-workspace {

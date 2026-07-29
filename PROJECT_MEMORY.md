@@ -12,13 +12,13 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 11a complete; 11b pending.
+- Checkpoint: 11 complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: interactive structured Tree View.
+- Next work: user testing and issue-driven Tree View refinement.
 
 The plugin loads and migrates validated schema-v1 or schema-v2 task data before
 registering views.
@@ -49,6 +49,11 @@ MillerTasksPlugin
 │           ├── one shared heading
 │           ├── pinned Today projection
 │           └── horizontally scrolling unlabelled tree columns
+├── MillerTaskTreeView (separate Obsidian ItemView)
+│   └── React root
+│       └── TaskTreeApp
+│           ├── deterministic top-down node layout
+│           └── orthogonal parent-child connections
 └── MillerTaskInspectorView (native right-sidebar ItemView)
     └── React root
         └── TaskInspectorApp
@@ -80,6 +85,11 @@ MillerTasksPlugin
 - `src/ui/taskDrop.ts` converts row/column drop targets into store moves.
 - `src/ui/taskTreeLayout.ts` deterministically places complete task forests
   from top to bottom without overlaps or force simulation.
+- `src/ui/TaskTreeApp.tsx` renders that layout as a manually scrollable canvas,
+  subscribes to the same store and selection, and delegates completion and
+  deletion to the plugin lifecycle.
+- `src/view/MillerTaskTreeView.tsx` registers the React canvas as its own
+  Obsidian ItemView.
 - `src/view/ConfirmationModal.ts` provides native Obsidian confirmations for
   parent completion and subtree deletion.
 - `src/ui/TaskInspectorApp.tsx` renders task metadata and daily-template
@@ -197,6 +207,16 @@ The layout is:
 ├───────────────┬───────────────────────────────────────────────┤ │ right     │
 │ pinned Today  │ manually scrolling hierarchy columns →       │ │ sidebar   │
 └───────────────┴───────────────────────────────────────────────┘ └───────────┘
+```
+
+The alternate hierarchy view is:
+
+```text
+                root task
+               ┌────┴────┐
+           child         child
+          ┌───┴───┐
+       grandchild grandchild
 ```
 
 ## Development commands
@@ -559,3 +579,21 @@ horizontal viewport.
 - Edges expose exact parent-bottom and child-top connection coordinates.
 - Generated daily instances are excluded because they do not belong to the
   persistent hierarchy.
+
+## Checkpoint 11b verification
+
+- A separate `MillerTaskTreeView` opens through the `git-fork` ribbon icon or
+  `Miller Tasks: Open task tree`.
+- All persistent hierarchy tasks render, including completed tasks; generated
+  daily instances remain in Today only.
+- Orthogonal one-pixel connections use Obsidian theme borders and run from
+  parent bottoms to child tops.
+- Nodes keep the native checkbox-plus-text task treatment without cards,
+  alternate surfaces, physics, or decorative controls.
+- Clicking a node updates shared selection and opens the native right-sidebar
+  inspector. Completion, Delete, and Backspace delegate to the same confirmed
+  subtree actions as Miller columns.
+- The canvas never centers or scrolls automatically; mouse, trackpad, and
+  native scrollbars retain full viewport control.
+- Fifty-eight tests across thirteen files, lint, TypeScript, and the production
+  build pass.

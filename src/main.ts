@@ -2,6 +2,7 @@ import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
 
 import {
   MILLER_TASK_INSPECTOR_VIEW_TYPE,
+  MILLER_TASK_TREE_VIEW_TYPE,
   MILLER_TASKS_VIEW_TYPE,
 } from "./constants";
 import { TaskAttachmentService } from "./data/TaskAttachmentService";
@@ -16,6 +17,7 @@ import {
 import { TaskAttachment } from "./domain/task";
 import { requestConfirmation } from "./view/ConfirmationModal";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
+import { MillerTaskTreeView } from "./view/MillerTaskTreeView";
 import { MillerTasksView } from "./view/MillerTasksView";
 
 export default class MillerTasksPlugin extends Plugin {
@@ -89,6 +91,26 @@ export default class MillerTasksPlugin extends Plugin {
         ),
     );
     this.registerView(
+      MILLER_TASK_TREE_VIEW_TYPE,
+      (leaf) =>
+        new MillerTaskTreeView(
+          leaf,
+          taskStore,
+          this.taskSelection,
+          (taskId) => {
+            this.selectTask(taskId);
+          },
+          {
+            completeTask: (taskId, completed) => {
+              void this.completeTask(taskId, completed);
+            },
+            deleteTask: (taskId) => {
+              void this.deleteTask(taskId);
+            },
+          },
+        ),
+    );
+    this.registerView(
       MILLER_TASK_INSPECTOR_VIEW_TYPE,
       (leaf) =>
         new MillerTaskInspectorView(
@@ -131,12 +153,23 @@ export default class MillerTasksPlugin extends Plugin {
     this.addRibbonIcon("list-tree", "Open miller tasks", () => {
       void this.activateView();
     });
+    this.addRibbonIcon("git-fork", "Open task tree", () => {
+      void this.activateTreeView();
+    });
 
     this.addCommand({
       id: "open-task-browser",
       name: "Open task browser",
       callback: () => {
         void this.activateView();
+      },
+    });
+
+    this.addCommand({
+      id: "open-task-tree",
+      name: "Open task tree",
+      callback: () => {
+        void this.activateTreeView();
       },
     });
 
@@ -332,6 +365,22 @@ export default class MillerTasksPlugin extends Plugin {
       leaf = workspace.getLeaf(true);
       await leaf.setViewState({
         type: MILLER_TASKS_VIEW_TYPE,
+        active: true,
+      });
+    }
+
+    await workspace.revealLeaf(leaf);
+  }
+
+  private async activateTreeView(): Promise<void> {
+    const { workspace } = this.app;
+    let leaf: WorkspaceLeaf | undefined =
+      workspace.getLeavesOfType(MILLER_TASK_TREE_VIEW_TYPE)[0];
+
+    if (!leaf) {
+      leaf = workspace.getLeaf(true);
+      await leaf.setViewState({
+        type: MILLER_TASK_TREE_VIEW_TYPE,
         active: true,
       });
     }

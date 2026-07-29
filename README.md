@@ -2,7 +2,8 @@
 
 Miller Tasks is a desktop task tracker for Obsidian. It turns one recursive
 task tree into horizontally scrolling Miller columns and keeps task details in
-Obsidian's native, collapsible right sidebar.
+Obsidian's native, collapsible right sidebar. A separate structured Tree View
+shows the complete hierarchy from top-level parents down to their children.
 
 The design is deliberately minimal: one shared heading, an always-pinned Today
 column, unlabelled hierarchy columns, and the same background as the active
@@ -14,6 +15,8 @@ Obsidian theme.
 ## Features
 
 - Navigate and reorganize a task tree up to 10 levels deep.
+- Inspect the complete hierarchy in a deterministic top-down Tree View with
+  Graph View-like connections.
 - Render every task as a plain Obsidian checkbox-and-text line.
 - Add any tree task to the pinned Today column from its row calendar icon.
 - Show a subtask's direct parent as quiet context below its Today title.
@@ -65,6 +68,9 @@ plugins**.
 
 - Open the browser from the ribbon tree icon or run **Miller Tasks: Open task
   browser** from the command palette.
+- Open the structured hierarchy from the ribbon fork icon or run **Miller
+  Tasks: Open task tree**. The canvas uses manual horizontal and vertical
+  scrolling and never moves itself.
 - Type into **New task** and press Enter. Selecting the new row opens its
   subtask column.
 - Click a row to select it. Double-click it, or press F2, to rename it.
@@ -77,6 +83,9 @@ plugins**.
   the next column; Arrow Left returns to the parent.
 - Drag within a column to reorder. Drop onto a row in another column to make a
   task its child; drop near an edge to insert beside it.
+- In Tree View, click a node to open its inspector. Checkboxes and
+  Delete/Backspace use the same completion and subtree-deletion rules as the
+  Miller columns.
 - Edit metadata in the right sidebar. Text saves after 400 ms and immediately
   on blur or task change.
 - Create and rename daily tasks in the **Daily tasks** section of the right

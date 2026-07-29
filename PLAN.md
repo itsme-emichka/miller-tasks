@@ -51,7 +51,7 @@ automatically while all checks are green.
       section.
 - [x] 11a. Add a deterministic top-down layout engine for the complete task
       forest.
-- [ ] 11b. Build and register the interactive structured Tree View.
+- [x] 11b. Build and register the interactive structured Tree View.
 
 ## Product constraints
 
@@ -73,5 +73,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 11a is complete. The next work is the interactive structured Tree
-View built on the tested layout engine.
+Checkpoint 11 is complete. Miller columns and the structured top-down Tree
+View are both available as native Obsidian ItemViews.
