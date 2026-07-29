@@ -357,7 +357,7 @@
 .miller-task-row {
   display: grid;
   grid-template-columns: 1.4rem minmax(0, 1fr) 1.5rem;
-  align-items: start;
+  align-items: center;
   min-height: 1.9rem;
   padding: 0.1rem 0.75rem;
   background: var(--background-primary);
@@ -366,14 +366,14 @@
 
 .miller-today-task-row {
   grid-template-columns: 1.4rem minmax(0, 1fr);
-  align-items: start;
+  align-items: center;
   padding-top: 0.18rem;
   padding-bottom: 0.18rem;
   touch-action: auto;
 }
 
 .miller-today-task-row .miller-task-checkbox {
-  margin-top: 0.32rem;
+  margin-top: 0;
 }
 
 .miller-today-task-copy {
@@ -402,7 +402,7 @@
 }
 
 .miller-task-checkbox {
-  margin: 0.42rem 0 0;
+  margin: 0;
 }
 
 .miller-task-title,
@@ -472,7 +472,7 @@
   place-items: center;
   width: 1.5rem;
   height: 1.5rem;
-  margin: 0.2rem 0 0;
+  margin: 0;
   padding: 0.2rem;
   border: 0;
   border-radius: 0;

@@ -24,6 +24,7 @@ can resume without reconstructing architecture or product decisions.
   checkpoint 14a4 constrains the compact inspector to the mobile safe area.
   Checkpoint 14a5 adds the Today completed-task disclosure on desktop, and
   checkpoint 14a6 exposes daily-template editing inside compact Today.
+  Checkpoint 14a7 centers row controls against wrapped titles.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -1203,3 +1204,13 @@ horizontal viewport.
 - The release changes presentation and access to existing daily-template
   actions only. Task data, replica synchronization, and the device-local
   Undo/Redo boundary remain unchanged.
+
+## Checkpoint 14a7 wrapped-row control alignment
+
+- Miller-column and Today rows vertically center their checkbox against the
+  full height of a wrapped title block. The Miller Today action uses the same
+  alignment, and Today rows include their quiet parent context in the centered
+  text block.
+- This supersedes checkpoint 14a3's first-line alignment after physical
+  iPhone QA showed that it looked detached from two- and three-line titles.
+  Wrapping, selection, completion, and task data remain unchanged.
