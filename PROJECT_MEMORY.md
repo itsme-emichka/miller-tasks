@@ -23,12 +23,12 @@ can resume without reconstructing architecture or product decisions.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
-- Plugin version: `0.1.2`.
+- Plugin version: `0.1.3`.
 - Minimum Obsidian version: `1.8.0`.
 - Mobile beta: enabled with `isDesktopOnly: false`.
-- Distribution: GitHub prerelease `0.1.2` provides the replica-sync beta and
-  compact Today bottom sheet as `main.js`, `manifest.json`, and `styles.css`
-  through Obsidian42 - BRAT.
+- Distribution: GitHub prerelease `0.1.3` provides the replica-sync beta,
+  compact Today bottom sheet, and mobile navbar/gesture containment as
+  `main.js`, `manifest.json`, and `styles.css` through Obsidian42 - BRAT.
 - Next work: checkpoint 13f daily/attachment file-arrival hardening, checkpoint
   13g2 offline/inactive-device conflict and resurrection testing through
   Dropbox, and checkpoint 14c physical iPhone touch and attachment QA.
@@ -1125,3 +1125,14 @@ horizontal viewport.
 - The release changes compact presentation only. Desktop Today, task data,
   replica synchronization, and the device-local Undo/Redo boundary remain
   unchanged.
+
+## Checkpoint 14b3 mobile gesture-fix beta distribution
+
+- Version `0.1.3` publishes checkpoint 14a2 through the existing BRAT
+  repository entry for physical iPhone retesting.
+- The prerelease contains exactly the production `main.js`, `manifest.json`,
+  and `styles.css` assets built after all 123 tests, lint, TypeScript, and the
+  production build pass.
+- The release changes mobile chrome clearance and gesture ownership only.
+  Desktop presentation, task data, replica synchronization, and the
+  device-local Undo/Redo boundary remain unchanged.
