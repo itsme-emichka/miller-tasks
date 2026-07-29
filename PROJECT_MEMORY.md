@@ -12,15 +12,15 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 13 complete.
+- Checkpoint: 13a complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 13a, implementing schema-v3 version stamps,
-  tombstones, canonical serialization, deterministic schema-v2 migration, and
-  pure merge tests from `SYNC_DESIGN.md`.
+- Next work: checkpoint 13b, replacing contiguous sibling indexes with stable
+  position keys and making every `TaskStore` mutation advance the correct
+  schema-v3 atomic field version.
 
 The plugin loads and migrates validated schema-v1 or schema-v2 task data before
 registering views.
@@ -39,6 +39,9 @@ MillerTasksPlugin
 │   └── vault copies, resource URLs, opening, and trash
 ├── TaskStore
 │   └── task graph, invariants, CRUD, subscriptions
+├── schema-v3 synchronization domain (not runtime-wired yet)
+│   ├── deterministic schema-v1/v2 migration + canonical serialization
+│   └── pure entity/field/tombstone/conflict merge
 ├── TaskSelection
 │   └── shared selected-task state
 ├── TaskDraftBuffer
@@ -76,6 +79,12 @@ MillerTasksPlugin
   ms, and flushes before selection changes, blur, view close, and unload.
 - `src/state/runTaskRollover.ts` applies deterministic rollover and clears a
   selected daily instance when that instance is replaced.
+- `src/sync/syncData.ts` defines the isolated schema-v3 synchronization model,
+  deterministic migration position keys and daily occurrence IDs, defensive
+  canonicalization, and byte-stable JSON serialization.
+- `src/sync/mergeSyncData.ts` provides the pure state join, three-way conflict
+  recognition, logical-version comparison, entity and attachment presence,
+  and conflict-dismissal filtering.
 - `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
@@ -282,6 +291,8 @@ At the end of every checkpoint:
   are complete.
 - Schema v2 still writes one complete `data.json` snapshot and must not be
   treated as conflict-safe across simultaneously edited devices.
+- Schema-v3 migration and merge code is intentionally isolated from
+  `TaskPersistence` until checkpoint 13b versions every runtime mutation.
 
 ## Checkpoint 1 verification
 
@@ -716,3 +727,26 @@ horizontal viewport.
   restoring obsolete sync metadata.
 - `isDesktopOnly` stays `true` until the complete two-device matrix passes and
   mobile API, dependency, touch, and layout work is verified.
+
+## Checkpoint 13a schema-v3 foundation
+
+- The new synchronization domain remains disconnected from live
+  `TaskPersistence`, so installing this checkpoint cannot migrate or rewrite
+  existing user task data.
+- Schema v1 and schema v2 migrate deterministically to an isolated schema-v3
+  document with logical versions, entity/attachment/conflict tombstones,
+  stable migration position keys, and canonical array ordering.
+- Existing normal task IDs and values are preserved. Random schema-v2 daily
+  instance IDs become deterministic `<template-id>:<local-date>` occurrences.
+- Canonical serialization is byte-stable and defensively clones nested tags,
+  attachments, versions, and conflict values.
+- The pure merge combines independent entity creation and different-field
+  edits, resolves same-field divergence by logical stamp, and retains the
+  losing value in one deduplicated conflict record.
+- Tombstones suppress older task and attachment state. A newer explicit
+  existence stamp supports intentional local Undo without allowing an old
+  offline field edit to resurrect an entity.
+- Versioned conflict tombstones prevent dismissed conflicts from returning.
+- Eighty-four tests across sixteen files pass, including thirteen new schema
+  migration, canonicalization, convergence, conflict, deletion, attachment,
+  dismissal, and daily-occurrence tests.

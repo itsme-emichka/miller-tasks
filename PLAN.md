@@ -60,7 +60,7 @@ automatically while all checks are green.
 - [x] 12a. Keep Undo/Redo active after deleting the focused DOM row.
 - [x] 13. Design the mobile synchronization, conflict, migration, attachment,
       daily-occurrence, and release-gate strategy.
-- [ ] 13a. Add schema-v3 version stamps, tombstones, canonical serialization,
+- [x] 13a. Add schema-v3 version stamps, tombstones, canonical serialization,
       deterministic schema-v2 migration, and pure merge tests.
 - [ ] 13b. Replace contiguous sibling indexes with stable position keys and
       version every store mutation at its atomic field boundary.
@@ -96,7 +96,8 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 13 is complete. The accepted synchronization design is documented
-in `SYNC_DESIGN.md`. Next, implement schema-v3 stamps, tombstones, deterministic
-migration, canonical serialization, and the pure merge engine before changing
-the desktop-only manifest flag.
+Checkpoint 13a is complete. The isolated schema-v3 domain layer now provides
+logical stamps, tombstones, canonical serialization, deterministic migration,
+field-level state merging, and conflict records without changing runtime
+schema-v2 persistence. Next, replace contiguous sibling indexes with stable
+position keys and version every store mutation.

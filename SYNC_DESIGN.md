@@ -3,6 +3,11 @@
 Status: accepted implementation plan
 Date: 2026-07-29
 
+Implementation status: checkpoint 13a provides the isolated schema-v3 types,
+deterministic schema-v1/v2 migration, canonical serialization, logical state
+join, tombstone presence rules, and conflict tests. Runtime persistence remains
+on schema v2 until store mutations receive version stamps in checkpoint 13b.
+
 ## Scope
 
 This document defines how Miller Tasks will synchronize task data between
