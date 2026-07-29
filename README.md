@@ -129,6 +129,12 @@ Task records are stored by Obsidian through the plugin data API in:
 .obsidian/plugins/miller-tasks/data.json
 ```
 
+The current schema uses logical field versions, stable sibling position keys,
+and deletion tombstones. Existing schema-v1 and schema-v2 data migrates
+deterministically before the first subsequent save. The plugin remains
+desktop-only while external sync reconciliation and mobile UI work are still
+under development.
+
 Images are copied into the vault:
 
 ```text

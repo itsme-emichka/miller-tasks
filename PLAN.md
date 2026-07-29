@@ -62,7 +62,7 @@ automatically while all checks are green.
       daily-occurrence, and release-gate strategy.
 - [x] 13a. Add schema-v3 version stamps, tombstones, canonical serialization,
       deterministic schema-v2 migration, and pure merge tests.
-- [ ] 13b. Replace contiguous sibling indexes with stable position keys and
+- [x] 13b. Replace contiguous sibling indexes with stable position keys and
       version every store mutation at its atomic field boundary.
 - [ ] 13c. Add external-settings reconciliation, conflict records, save-echo
       suppression, and operation-based local Undo/Redo.
@@ -96,8 +96,8 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 13a is complete. The isolated schema-v3 domain layer now provides
-logical stamps, tombstones, canonical serialization, deterministic migration,
-field-level state merging, and conflict records without changing runtime
-schema-v2 persistence. Next, replace contiguous sibling indexes with stable
-position keys and version every store mutation.
+Checkpoint 13b is complete. Runtime persistence now uses validated schema v3,
+stable position keys, logical field versions, entity and attachment
+tombstones, and deterministic daily-occurrence IDs while exposing the existing
+view model to the UI. Next, add serialized external-settings reconciliation,
+save-echo suppression, conflict delivery, and operation-based Undo/Redo.

@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createDefaultPluginData } from "../domain/pluginData";
 import { TaskStore } from "../domain/TaskStore";
-import { PluginData } from "../domain/task";
+import {
+  createDefaultPluginDataV3,
+  PluginDataV3,
+} from "../sync/syncData";
 import { TaskPersistence } from "./TaskPersistence";
 
 describe("TaskPersistence", () => {
@@ -24,10 +27,8 @@ describe("TaskPersistence", () => {
       },
     );
 
-    const first = createDefaultPluginData();
-    first.tasks = [];
-    const second = createDefaultPluginData();
-    second.tasks = [];
+    const first = createDefaultPluginDataV3();
+    const second = createDefaultPluginDataV3();
 
     const firstSave = persistence.save(first);
     second.showCompleted = true;
@@ -39,7 +40,7 @@ describe("TaskPersistence", () => {
   });
 
   it("reloads the latest store state after queued saves", async () => {
-    let persisted: PluginData | null = null;
+    let persisted: PluginDataV3 | null = null;
     const persistence = new TaskPersistence(
       async () => persisted,
       async (data) => {
@@ -79,5 +80,67 @@ describe("TaskPersistence", () => {
       new TaskStore(await persistence.load()).getTask(created.id)
         ?.description,
     ).toBe("Saved in order");
+  });
+
+  it("migrates schema v2 before the first canonical schema-v3 save", async () => {
+    const legacy = createDefaultPluginData();
+    legacy.tasks.push({
+      id: "legacy",
+      parentId: null,
+      title: "Preserved task",
+      completed: false,
+      description: "Legacy metadata",
+      tags: ["migration"],
+      dueDate: null,
+      dueTime: null,
+      priority: "none",
+      flagged: false,
+      url: null,
+      attachments: [],
+      order: 0,
+      createdAt: 10,
+      updatedAt: 10,
+      completedAt: null,
+      today: false,
+      todayAddedAt: null,
+      dailyTemplateId: null,
+      generatedForDate: null,
+    });
+    let persisted: unknown = legacy;
+    const persistence = new TaskPersistence(
+      async () => persisted,
+      async (data) => {
+        persisted = data;
+      },
+    );
+    const loaded = await persistence.load();
+    const store = new TaskStore(loaded, persistence, {
+      actorId: "desktop",
+      now: () => 20,
+    });
+
+    expect(loaded.schemaVersion).toBe(3);
+    expect(store.getTask("legacy")).toMatchObject({
+      title: "Preserved task",
+      description: "Legacy metadata",
+      tags: ["migration"],
+    });
+
+    store.updateTask("legacy", { flagged: true });
+    await store.flush();
+
+    expect(persisted).toMatchObject({
+      schemaVersion: 3,
+      clock: 1,
+      tasks: [
+        expect.objectContaining({
+          id: "legacy",
+          flagged: true,
+        }),
+      ],
+    });
+    expect(
+      typeof (persisted as PluginDataV3).tasks[0]?.positionKey,
+    ).toBe("string");
   });
 });

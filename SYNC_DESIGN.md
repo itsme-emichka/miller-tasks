@@ -3,10 +3,11 @@
 Status: accepted implementation plan
 Date: 2026-07-29
 
-Implementation status: checkpoint 13a provides the isolated schema-v3 types,
-deterministic schema-v1/v2 migration, canonical serialization, logical state
-join, tombstone presence rules, and conflict tests. Runtime persistence remains
-on schema v2 until store mutations receive version stamps in checkpoint 13b.
+Implementation status: checkpoint 13b makes schema v3 the runtime persistence
+format. Schema-v1/v2 migration, canonical serialization, stable position keys,
+logical field versions, tombstone visibility, deterministic daily occurrence
+IDs, and the legacy-compatible UI materializer are active. External settings
+reconciliation and operation-based Undo/Redo remain checkpoint 13c work.
 
 ## Scope
 

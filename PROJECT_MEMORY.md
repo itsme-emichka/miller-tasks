@@ -12,18 +12,18 @@ can resume without reconstructing architecture or product decisions.
 
 ## Current state
 
-- Checkpoint: 13a complete.
+- Checkpoint: 13b complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
 - Plugin version: `0.1.0`.
 - Minimum Obsidian version: `1.8.0`.
-- Next work: checkpoint 13b, replacing contiguous sibling indexes with stable
-  position keys and making every `TaskStore` mutation advance the correct
-  schema-v3 atomic field version.
+- Next work: checkpoint 13c, adding serialized
+  `onExternalSettingsChange()` reconciliation, save-echo suppression,
+  conflict delivery, and operation-based local Undo/Redo.
 
-The plugin loads and migrates validated schema-v1 or schema-v2 task data before
-registering views.
+The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
+task data before registering views.
 `TaskStore` owns CRUD, ordering, moves, depth/cycle checks, completion and
 deletion cascades, metadata normalization, subscriptions, and queued saves.
 The main React view now renders the live task tree as horizontally scrolling
@@ -39,8 +39,9 @@ MillerTasksPlugin
 │   └── vault copies, resource URLs, opening, and trash
 ├── TaskStore
 │   └── task graph, invariants, CRUD, subscriptions
-├── schema-v3 synchronization domain (not runtime-wired yet)
+├── schema-v3 synchronization domain
 │   ├── deterministic schema-v1/v2 migration + canonical serialization
+│   ├── stable position keys + legacy-compatible UI materialization
 │   └── pure entity/field/tombstone/conflict merge
 ├── TaskSelection
 │   └── shared selected-task state
@@ -67,7 +68,8 @@ MillerTasksPlugin
 
 - `src/main.ts` owns the Obsidian lifecycle, view registration, ribbon icon,
   commands, data loading, and store lifetime.
-- `src/domain/TaskStore.ts` is the only mutation boundary for task data.
+- `src/domain/TaskStore.ts` preserves the public import boundary while
+  `src/domain/VersionedTaskStore.ts` owns all live schema-v3 mutations.
 - `src/domain/pluginData.ts` validates stored data and normalizes user input.
 - `src/data/TaskPersistence.ts` serializes immutable snapshots through
   `Plugin.loadData()` and `Plugin.saveData()`.
@@ -85,6 +87,13 @@ MillerTasksPlugin
 - `src/sync/mergeSyncData.ts` provides the pure state join, three-way conflict
   recognition, logical-version comparison, entity and attachment presence,
   and conflict-dismissal filtering.
+- `src/sync/parseSyncData.ts` validates persisted schema v3 and routes legacy
+  data through deterministic migration.
+- `src/sync/positionKey.ts` creates stable lexicographic keys before, between,
+  and after siblings without rewriting neighboring records.
+- `src/sync/materializeSyncData.ts` derives the unchanged schema-v2-shaped view
+  snapshot, including contiguous display-only `order` values, from schema-v3
+  persistence.
 - `src/view/MillerTasksView.tsx` is the boundary between Obsidian and React.
 - `src/view/MillerTaskInspectorView.ts` is registered separately and opened
   through `Workspace.getRightLeaf(false)`, keeping it in the native sidebar.
@@ -143,10 +152,13 @@ interface TaskRecord {
 }
 ```
 
-Plugin data uses `schemaVersion: 2`, `showCompleted: false`, a flat task array,
-and ordered `DailyTaskTemplate` records. Schema-v1 data migrates in memory by
-adding inactive Today fields and an empty template list. Hierarchy is
-represented by `parentId`; depth is derived and never stored.
+`TaskRecord` is now the compatibility view model consumed by existing UI code.
+Persisted plugin data uses schema v3: normal tasks and deterministic daily
+occurrences are separate, mutable field groups carry logical versions,
+deletions remain as tombstones, and sibling order uses `positionKey`.
+Schema-v1/schema-v2 data migrates deterministically in memory and is saved as
+schema v3 on the next mutation. Hierarchy is represented by `parentId`; depth
+and contiguous display-only `order` values are derived and never persisted.
 
 ## Today and daily invariants
 
@@ -169,7 +181,8 @@ represented by `parentId`; depth is derived and never stored.
 - Maximum task depth is 10.
 - A task cannot be its own parent or move below one of its descendants.
 - Moving a subtree is rejected if its deepest node would exceed depth 10.
-- Sibling order is explicit and normalized after every create, delete, or move.
+- Sibling order uses stable lexicographic position keys. Create or move changes
+  only the affected task; deleting a sibling rewrites no surviving task.
 - Completing a task completes its entire subtree after UI confirmation.
 - Reopening a task reopens only that task.
 - Deleting a task removes the entire subtree after UI confirmation.
@@ -187,9 +200,8 @@ represented by `parentId`; depth is derived and never stored.
 - Preserve `schemaVersion` for future migrations.
 - Task timestamps are epoch milliseconds.
 - Due date and time remain local strings and are never timezone-converted.
-- The current schema-v2 whole-document save queue is safe only inside one
-  plugin process. It is not the mobile conflict strategy because two devices
-  can overwrite independent complete snapshots.
+- The serialized save queue remains the local write boundary. External
+  settings reconciliation is not active until checkpoint 13c.
 - The accepted schema-v3 design is state-based and merges versioned atomic
   fields, stable structural positions, entity tombstones, attachment
   add/remove entries, and deterministic daily occurrences.
@@ -289,10 +301,11 @@ At the end of every checkpoint:
 - `isDesktopOnly` intentionally remains `true` until schema-v3 synchronization,
   the two-device release matrix, the mobile API audit, and the phone/tablet UI
   are complete.
-- Schema v2 still writes one complete `data.json` snapshot and must not be
-  treated as conflict-safe across simultaneously edited devices.
-- Schema-v3 migration and merge code is intentionally isolated from
-  `TaskPersistence` until checkpoint 13b versions every runtime mutation.
+- Schema v3 is live, but `onExternalSettingsChange()` is not wired yet; this
+  checkpoint alone must not be treated as simultaneous multi-device support.
+- Undo/Redo still restores full schema-v3 snapshots as a desktop-only
+  transition. Checkpoint 13c must replace this with freshly versioned inverse
+  operations before external merges are accepted.
 
 ## Checkpoint 1 verification
 
@@ -750,3 +763,39 @@ horizontal viewport.
 - Eighty-four tests across sixteen files pass, including thirteen new schema
   migration, canonicalization, convergence, conflict, deletion, attachment,
   dismissal, and daily-occurrence tests.
+
+## Checkpoint 13b versioned runtime persistence
+
+- `TaskPersistence` now validates schema v3 or deterministically migrates
+  schema v1/schema v2, serializes canonical schema-v3 snapshots, and preserves
+  the existing single-process save queue.
+- `VersionedTaskStore` is the live mutation boundary. `TaskStore.ts` remains a
+  small stable re-export so views, actions, and tests keep their existing
+  import path.
+- The React UI still receives the established `PluginData`/`TaskRecord` view
+  shape. `materializePluginDataV3` filters tombstones and derives task,
+  template, attachment, daily-instance, and display-order records.
+- Stable lexicographic position keys replace persisted contiguous sibling
+  indexes. Reorder and reparent change only the moved task's atomic structure
+  group; neighboring tasks retain both key and version.
+- Creation, metadata edits, due date/time, completion cascades, Today
+  projection, moves, attachment add/remove, completed visibility, daily
+  templates, daily occurrences, deletion, and rollover advance the logical
+  clock and stamp only their affected atomic groups.
+- Subtree deletion retains raw entities and writes one shared logical
+  tombstone version for every known descendant. Attachment removal likewise
+  retains add metadata behind an attachment tombstone.
+- Daily occurrence IDs are deterministic and daily-instance metadata is
+  preserved during schema-v2 migration. Daily titles and order remain derived
+  from their template.
+- A strict schema-v3 parser rejects incomplete records, malformed stamps,
+  invalid position keys, clocks behind observed versions, inconsistent
+  timestamps, invalid metadata, and duplicate IDs before data reaches the
+  store.
+- Existing CRUD, navigation, Today, Tree View, attachment, daily, and
+  Undo/Redo behavior remains covered without UI changes.
+- Ninety-nine tests across nineteen files pass, including fifteen new
+  position, parser, materializer, atomic-version, stable-reorder, tombstone,
+  attachment, preference, template, and occurrence assertions.
+- `isDesktopOnly` remains `true`. External settings reconciliation and
+  operation-based Undo/Redo are explicitly deferred to checkpoint 13c.

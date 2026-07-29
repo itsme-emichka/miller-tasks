@@ -5,6 +5,7 @@ import {
   cloneVersion,
   compareVersions,
   ConflictEntityType,
+  DailyOccurrenceFieldGroup,
   EntityType,
   JsonValue,
   PluginDataV3,
@@ -471,35 +472,66 @@ function mergeDailyOccurrence(
   base: SyncedDailyOccurrence | undefined,
   context: MergeContext,
 ): SyncedDailyOccurrence {
-  const completion = mergeRegister(
-    {
-      value: {
-        completed: left.completed,
-        completedAt: left.completedAt,
-      },
-      version: left.completionVersion,
-    },
-    {
-      value: {
-        completed: right.completed,
-        completedAt: right.completedAt,
-      },
-      version: right.completionVersion,
-    },
-    base
-      ? {
-          value: {
-            completed: base.completed,
-            completedAt: base.completedAt,
-          },
-          version: base.completionVersion,
-        }
-      : undefined,
-    {
-      entityType: "daily-occurrence",
-      entityId: left.id,
-      fieldGroup: "completion",
-    },
+  const description = mergeOccurrenceField(
+    "description",
+    left,
+    right,
+    base,
+    (occurrence) => occurrence.description,
+    context,
+  );
+  const tags = mergeOccurrenceField(
+    "tags",
+    left,
+    right,
+    base,
+    (occurrence) => occurrence.tags,
+    context,
+  );
+  const due = mergeOccurrenceField(
+    "due",
+    left,
+    right,
+    base,
+    (occurrence) => ({
+      dueDate: occurrence.dueDate,
+      dueTime: occurrence.dueTime,
+    }),
+    context,
+  );
+  const priority = mergeOccurrenceField(
+    "priority",
+    left,
+    right,
+    base,
+    (occurrence) => occurrence.priority,
+    context,
+  );
+  const flag = mergeOccurrenceField(
+    "flag",
+    left,
+    right,
+    base,
+    (occurrence) => occurrence.flagged,
+    context,
+  );
+  const url = mergeOccurrenceField(
+    "url",
+    left,
+    right,
+    base,
+    (occurrence) => occurrence.url,
+    context,
+  );
+  const completion = mergeOccurrenceField(
+    "completion",
+    left,
+    right,
+    base,
+    (occurrence) => ({
+      completed: occurrence.completed,
+      completedAt: occurrence.completedAt,
+    }),
     context,
   );
 
@@ -511,12 +543,60 @@ function mergeDailyOccurrence(
     ),
     date: chooseImmutableString(left.date, right.date),
     completed: completion.value.completed,
+    description: description.value,
+    tags: [...tags.value],
+    dueDate: due.value.dueDate,
+    dueTime: due.value.dueTime,
+    priority: priority.value,
+    flagged: flag.value,
+    url: url.value,
     completedAt: completion.value.completedAt,
     createdAt: Math.min(left.createdAt, right.createdAt),
     updatedAt: Math.max(left.updatedAt, right.updatedAt),
+    todayAddedAt: Math.min(left.todayAddedAt, right.todayAddedAt),
     existence: maximumVersion(left.existence, right.existence),
-    completionVersion: completion.version,
+    fieldVersions: {
+      description: description.version,
+      tags: tags.version,
+      due: due.version,
+      priority: priority.version,
+      flag: flag.version,
+      url: url.version,
+      completion: completion.version,
+    },
   };
+}
+
+function mergeOccurrenceField<T>(
+  group: DailyOccurrenceFieldGroup,
+  left: SyncedDailyOccurrence,
+  right: SyncedDailyOccurrence,
+  base: SyncedDailyOccurrence | undefined,
+  getValue: (occurrence: SyncedDailyOccurrence) => T,
+  context: MergeContext,
+): Register<T> {
+  return mergeRegister(
+    {
+      value: getValue(left),
+      version: left.fieldVersions[group],
+    },
+    {
+      value: getValue(right),
+      version: right.fieldVersions[group],
+    },
+    base
+      ? {
+          value: getValue(base),
+          version: base.fieldVersions[group],
+        }
+      : undefined,
+    {
+      entityType: "daily-occurrence",
+      entityId: left.id,
+      fieldGroup: group,
+    },
+    context,
+  );
 }
 
 function mergeRegister<T>(
@@ -756,7 +836,9 @@ function getMaximumVersionCounter(data: PluginDataV3): number {
     ]),
     ...data.dailyOccurrences.flatMap((occurrence) => [
       occurrence.existence.counter,
-      occurrence.completionVersion.counter,
+      ...Object.values(occurrence.fieldVersions).map(
+        (version) => version.counter,
+      ),
     ]),
     ...data.entityTombstones.map(
       (tombstone) => tombstone.deleted.counter,

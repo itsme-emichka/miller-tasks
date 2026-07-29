@@ -6,6 +6,7 @@ import {
   TaskAttachment,
   TaskRecord,
 } from "../domain/task";
+import { createInitialPositionKey } from "./positionKey";
 
 export const SYNC_SCHEMA_VERSION = 3;
 export const MIGRATION_ACTOR_ID = "migration";
@@ -99,16 +100,38 @@ export interface SyncedDailyTemplate {
   fieldVersions: DailyTemplateFieldVersions;
 }
 
+export type DailyOccurrenceFieldGroup =
+  | "description"
+  | "tags"
+  | "due"
+  | "priority"
+  | "flag"
+  | "url"
+  | "completion";
+
+export type DailyOccurrenceFieldVersions = Record<
+  DailyOccurrenceFieldGroup,
+  VersionStamp
+>;
+
 export interface SyncedDailyOccurrence {
   id: string;
   templateId: string;
   date: string;
   completed: boolean;
+  description: string;
+  tags: string[];
+  dueDate: string | null;
+  dueTime: string | null;
+  priority: Priority;
+  flagged: boolean;
+  url: string | null;
   completedAt: number | null;
   createdAt: number;
   updatedAt: number;
+  todayAddedAt: number;
   existence: VersionStamp;
-  completionVersion: VersionStamp;
+  fieldVersions: DailyOccurrenceFieldVersions;
 }
 
 export interface EntityTombstone {
@@ -212,7 +235,7 @@ export function createDailyOccurrenceId(
 }
 
 export function createMigrationPositionKey(order: number): string {
-  return order.toString(36).padStart(12, "0");
+  return createInitialPositionKey(order);
 }
 
 export function canonicalizePluginDataV3(
@@ -366,11 +389,19 @@ function migrateDailyOccurrence(
     templateId: task.dailyTemplateId,
     date: task.generatedForDate,
     completed: task.completed,
+    description: task.description,
+    tags: [...task.tags],
+    dueDate: task.dueDate,
+    dueTime: task.dueTime,
+    priority: task.priority,
+    flagged: task.flagged,
+    url: task.url,
     completedAt: task.completedAt,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
+    todayAddedAt: task.todayAddedAt ?? task.createdAt,
     existence: cloneVersion(MIGRATION_VERSION),
-    completionVersion: cloneVersion(MIGRATION_VERSION),
+    fieldVersions: createMigrationOccurrenceFieldVersions(),
   };
 }
 
@@ -386,6 +417,18 @@ function createMigrationTaskFieldVersions(): TaskFieldVersions {
     completion: cloneVersion(MIGRATION_VERSION),
     today: cloneVersion(MIGRATION_VERSION),
     structure: cloneVersion(MIGRATION_VERSION),
+  };
+}
+
+function createMigrationOccurrenceFieldVersions(): DailyOccurrenceFieldVersions {
+  return {
+    description: cloneVersion(MIGRATION_VERSION),
+    tags: cloneVersion(MIGRATION_VERSION),
+    due: cloneVersion(MIGRATION_VERSION),
+    priority: cloneVersion(MIGRATION_VERSION),
+    flag: cloneVersion(MIGRATION_VERSION),
+    url: cloneVersion(MIGRATION_VERSION),
+    completion: cloneVersion(MIGRATION_VERSION),
   };
 }
 
@@ -427,8 +470,13 @@ function cloneDailyOccurrence(
 ): SyncedDailyOccurrence {
   return {
     ...occurrence,
+    tags: [...occurrence.tags],
     existence: cloneVersion(occurrence.existence),
-    completionVersion: cloneVersion(occurrence.completionVersion),
+    fieldVersions: Object.fromEntries(
+      Object.entries(occurrence.fieldVersions).map(
+        ([group, version]) => [group, cloneVersion(version)],
+      ),
+    ) as DailyOccurrenceFieldVersions,
   };
 }
 

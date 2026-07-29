@@ -236,7 +236,7 @@ describe("schema-v3 state merge", () => {
     const completed = clonePluginDataV3(source);
     completed.dailyOccurrences[0]!.completed = true;
     completed.dailyOccurrences[0]!.completedAt = 100;
-    completed.dailyOccurrences[0]!.completionVersion = stamp(
+    completed.dailyOccurrences[0]!.fieldVersions.completion = stamp(
       1,
       "mobile",
     );
@@ -248,7 +248,9 @@ describe("schema-v3 state merge", () => {
       id: "template:2026-07-29",
       completed: true,
       completedAt: 100,
-      completionVersion: stamp(1, "mobile"),
+      fieldVersions: {
+        completion: stamp(1, "mobile"),
+      },
     });
   });
 });

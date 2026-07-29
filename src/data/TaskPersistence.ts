@@ -1,11 +1,11 @@
+import { parseOrMigratePluginDataV3 } from "../sync/parseSyncData";
 import {
-  clonePluginData,
-  parsePluginData,
-} from "../domain/pluginData";
-import { PluginData } from "../domain/task";
+  clonePluginDataV3,
+  PluginDataV3,
+} from "../sync/syncData";
 
 type LoadRawData = () => Promise<unknown>;
-type SaveRawData = (data: PluginData) => Promise<void>;
+type SaveRawData = (data: PluginDataV3) => Promise<void>;
 
 export class TaskPersistence {
   private queue: Promise<void> = Promise.resolve();
@@ -16,12 +16,12 @@ export class TaskPersistence {
     private readonly saveRawData: SaveRawData,
   ) {}
 
-  async load(): Promise<PluginData> {
-    return parsePluginData(await this.loadRawData());
+  async load(): Promise<PluginDataV3> {
+    return parseOrMigratePluginDataV3(await this.loadRawData());
   }
 
-  save(data: PluginData): Promise<void> {
-    const snapshot = clonePluginData(data);
+  save(data: PluginDataV3): Promise<void> {
+    const snapshot = clonePluginDataV3(data);
     const save = this.queue.then(() => this.saveRawData(snapshot));
 
     this.latestSave = save;

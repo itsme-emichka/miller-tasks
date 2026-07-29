@@ -434,6 +434,192 @@ describe("TaskStore", () => {
     );
     expect(store.canUndo()).toBe(false);
   });
+
+  it("versions only the atomic field groups changed by an edit", () => {
+    let now = 1_000;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => "versioned-task",
+        now: () => ++now,
+        actorId: "desktop",
+      },
+    );
+    const created = store.createTask({ title: "Original" });
+    const afterCreate = store.getSyncSnapshot();
+    const createdRecord = afterCreate.tasks[0]!;
+
+    expect(afterCreate.clock).toBe(1);
+    expect(createdRecord.existence).toEqual({
+      counter: 1,
+      actorId: "desktop",
+    });
+    expect(
+      new Set(
+        Object.values(createdRecord.fieldVersions).map(
+          (version) => `${version.counter}:${version.actorId}`,
+        ),
+      ),
+    ).toEqual(new Set(["1:desktop"]));
+
+    store.updateTask(created.id, {
+      description: "Edited",
+      priority: "high",
+    });
+    const afterEdit = store.getSyncSnapshot();
+    const edited = afterEdit.tasks[0]!;
+
+    expect(afterEdit.clock).toBe(2);
+    expect(edited.fieldVersions.description.counter).toBe(2);
+    expect(edited.fieldVersions.priority.counter).toBe(2);
+    expect(edited.fieldVersions.title.counter).toBe(1);
+    expect(edited.fieldVersions.due.counter).toBe(1);
+
+    store.updateTask(created.id, {
+      description: "Edited",
+      priority: "high",
+    });
+    expect(store.getSyncSnapshot().clock).toBe(2);
+  });
+
+  it("reorders by changing only the moved task position", () => {
+    let id = 0;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `position-${++id}`,
+        now: () => id,
+        actorId: "desktop",
+      },
+    );
+    const first = store.createTask({ title: "First" });
+    const second = store.createTask({ title: "Second" });
+    const third = store.createTask({ title: "Third" });
+    const before = store.getSyncSnapshot();
+    const firstBefore = before.tasks.find(
+      (task) => task.id === first.id,
+    )!;
+    const secondBefore = before.tasks.find(
+      (task) => task.id === second.id,
+    )!;
+
+    store.reorderTask(third.id, 0);
+    const after = store.getSyncSnapshot();
+    const firstAfter = after.tasks.find(
+      (task) => task.id === first.id,
+    )!;
+    const secondAfter = after.tasks.find(
+      (task) => task.id === second.id,
+    )!;
+    const thirdAfter = after.tasks.find(
+      (task) => task.id === third.id,
+    )!;
+
+    expect(firstAfter.positionKey).toBe(firstBefore.positionKey);
+    expect(secondAfter.positionKey).toBe(secondBefore.positionKey);
+    expect(firstAfter.fieldVersions.structure).toEqual(
+      firstBefore.fieldVersions.structure,
+    );
+    expect(secondAfter.fieldVersions.structure).toEqual(
+      secondBefore.fieldVersions.structure,
+    );
+    expect(thirdAfter.fieldVersions.structure).toEqual({
+      counter: 4,
+      actorId: "desktop",
+    });
+    expect(store.getChildren(null).map((task) => task.id)).toEqual([
+      third.id,
+      first.id,
+      second.id,
+    ]);
+  });
+
+  it("persists subtree deletion as shared-version tombstones", () => {
+    let id = 0;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `delete-${++id}`,
+        now: () => id,
+        actorId: "mobile",
+      },
+    );
+    const parent = store.createTask({ title: "Parent" });
+    const child = store.createTask({
+      parentId: parent.id,
+      title: "Child",
+    });
+
+    store.deleteSubtree(parent.id);
+    const deleted = store.getSyncSnapshot();
+
+    expect(store.getTask(parent.id)).toBeUndefined();
+    expect(store.getTask(child.id)).toBeUndefined();
+    expect(deleted.tasks).toHaveLength(2);
+    expect(deleted.entityTombstones).toEqual([
+      {
+        entityType: "task",
+        id: parent.id,
+        deleted: { counter: 3, actorId: "mobile" },
+        deletedAt: 2,
+      },
+      {
+        entityType: "task",
+        id: child.id,
+        deleted: { counter: 3, actorId: "mobile" },
+        deletedAt: 2,
+      },
+    ]);
+  });
+
+  it("versions attachments, preferences, templates, and occurrences", () => {
+    let id = 0;
+    let now = new Date("2026-07-29T10:00:00").getTime();
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `metadata-${++id}`,
+        now: () => ++now,
+        actorId: "desktop",
+      },
+    );
+    const task = store.createTask({ title: "Task" });
+    store.addAttachment(task.id, {
+      id: "image",
+      path: "Miller Tasks/Attachments/metadata-1/image.png",
+      name: "image.png",
+      mimeType: "image/png",
+      createdAt: now,
+    });
+    store.removeAttachment(task.id, "image");
+    store.setShowCompleted(true);
+    const template = store.createDailyTemplate("Daily");
+    const occurrence = store.getTasksForDailyTemplate(template.id)[0]!;
+    store.updateTask(occurrence.id, {
+      description: "On this date",
+    });
+    store.completeSubtree(occurrence.id, true);
+
+    const synced = store.getSyncSnapshot();
+    const syncedTask = synced.tasks.find(
+      (candidate) => candidate.id === task.id,
+    )!;
+    const syncedOccurrence = synced.dailyOccurrences[0]!;
+
+    expect(syncedTask.attachments[0]!.added.counter).toBe(2);
+    expect(synced.attachmentTombstones[0]!.removed.counter).toBe(3);
+    expect(synced.showCompletedVersion.counter).toBe(4);
+    expect(synced.dailyTemplates[0]!.existence.counter).toBe(5);
+    expect(syncedOccurrence.fieldVersions.description.counter).toBe(6);
+    expect(syncedOccurrence.fieldVersions.completion.counter).toBe(7);
+    expect(syncedOccurrence.id).toBe(
+      `${template.id}:${occurrence.generatedForDate}`,
+    );
+  });
 });
 
 function expectTaskError(
