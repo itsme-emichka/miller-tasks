@@ -52,6 +52,30 @@ export function isTaskViewTarget(target: EventTarget | null): boolean {
   );
 }
 
+export function isTaskHistoryContext(
+  target: EventTarget | null,
+  hasActiveTaskView: boolean,
+): boolean {
+  if (isTaskViewTarget(target)) {
+    return true;
+  }
+  if (!hasActiveTaskView) {
+    return false;
+  }
+
+  const element = getElementTarget(target);
+  if (element) {
+    const tagName = element.tagName.toLowerCase();
+    return tagName === "body" || tagName === "html";
+  }
+  return (
+    target !== null &&
+    typeof target === "object" &&
+    (target as { nodeType?: unknown }).nodeType ===
+      Node.DOCUMENT_NODE
+  );
+}
+
 export function isTextEditingTarget(
   target: EventTarget | null,
 ): boolean {

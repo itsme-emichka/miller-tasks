@@ -16,7 +16,7 @@ import {
 } from "./state/runTaskRollover";
 import { TaskAttachment } from "./domain/task";
 import {
-  isTaskViewTarget,
+  isTaskHistoryContext,
   isTextEditingTarget,
   resolveTaskHistoryShortcut,
 } from "./ui/taskHistoryShortcuts";
@@ -242,7 +242,10 @@ export default class MillerTasksPlugin extends Plugin {
 
     this.registerDomEvent(document, "keydown", (event) => {
       if (
-        !isTaskViewTarget(event.target) ||
+        !isTaskHistoryContext(
+          event.target,
+          this.hasActiveTaskView(),
+        ) ||
         isTextEditingTarget(event.target)
       ) {
         return;
@@ -260,7 +263,7 @@ export default class MillerTasksPlugin extends Plugin {
         event.preventDefault();
         event.stopPropagation();
       }
-    });
+    }, { capture: true });
   }
 
   override onunload(): void {
@@ -324,6 +327,15 @@ export default class MillerTasksPlugin extends Plugin {
       this.taskSelection.setSelectedTaskId(historyTaskId);
       void this.activateInspector();
     }
+  }
+
+  private hasActiveTaskView(): boolean {
+    const { workspace } = this.app;
+    return (
+      workspace.getActiveViewOfType(MillerTasksView) !== null ||
+      workspace.getActiveViewOfType(MillerTaskTreeView) !== null ||
+      workspace.getActiveViewOfType(MillerTaskInspectorView) !== null
+    );
   }
 
   private async completeTask(

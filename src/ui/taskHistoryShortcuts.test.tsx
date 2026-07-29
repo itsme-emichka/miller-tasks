@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import {
+  isTaskHistoryContext,
   isTaskViewTarget,
   isTextEditingTarget,
   resolveTaskHistoryShortcut,
@@ -61,6 +62,17 @@ describe("task history shortcuts", () => {
 
     expect(isTaskViewTarget(task)).toBe(true);
     expect(isTaskViewTarget(outside)).toBe(false);
+    expect(isTaskHistoryContext(task, false)).toBe(true);
+    expect(isTaskHistoryContext(outside, true)).toBe(false);
+  });
+
+  it("uses the active task view after a deleted row loses focus", () => {
+    expect(isTaskHistoryContext(document.body, true)).toBe(true);
+    expect(isTaskHistoryContext(document.documentElement, true)).toBe(
+      true,
+    );
+    expect(isTaskHistoryContext(document, true)).toBe(true);
+    expect(isTaskHistoryContext(document.body, false)).toBe(false);
   });
 
   it("leaves native text editing history untouched", () => {

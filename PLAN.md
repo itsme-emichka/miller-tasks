@@ -57,6 +57,7 @@ automatically while all checks are green.
 - [x] 11d. Add manual Tree View zoom controls and fit-to-viewport.
 - [x] 12. Add bounded session-local Undo/Redo for task mutations, Obsidian
       commands, and view-scoped keyboard shortcuts.
+- [x] 12a. Keep Undo/Redo active after deleting the focused DOM row.
 
 ## Product constraints
 
@@ -78,6 +79,5 @@ automatically while all checks are green.
 
 ## Current checkpoint
 
-Checkpoint 12 is complete. Miller Tasks now keeps a bounded local history and
-supports Undo/Redo through commands and platform keyboard shortcuts without
-intercepting native text-field history.
+Checkpoint 12a is complete. Miller Tasks keeps its bounded local history and
+now retains keyboard Undo/Redo after deleting the currently focused task row.

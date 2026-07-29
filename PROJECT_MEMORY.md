@@ -652,3 +652,16 @@ horizontal viewport.
   task model suitable for a later mobile synchronization design.
 - Seventy tests across fourteen files, lint, TypeScript, and the production
   build pass.
+
+## Checkpoint 12a verification
+
+- After Delete or Backspace removes the focused task row, the browser can move
+  keyboard focus to the document body. History shortcuts now recognize that
+  focus-loss state when a Miller Tasks leaf remains active.
+- The document listener runs in the capture phase so Obsidian cannot consume
+  Cmd/Ctrl+Z before the plugin sees it.
+- The fallback accepts only the document, `html`, or `body`; buttons and other
+  elements outside Miller Tasks do not trigger task history.
+- Native text input Undo remains excluded exactly as before.
+- Seventy-one tests across fourteen files, lint, TypeScript, and the
+  production build pass.
