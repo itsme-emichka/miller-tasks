@@ -67,7 +67,7 @@ automatically while all checks are green.
 - [x] 13c. Replace the paid/shared-file transport design with free,
       provider-agnostic per-installation replica files inside the ordinary
       vault, stable local actors, and causal version vectors.
-- [ ] 13d. Replace snapshot-restoring Undo/Redo with freshly versioned local
+- [x] 13d. Replace snapshot-restoring Undo/Redo with freshly versioned local
       inverse operations before accepting replica merges.
 - [ ] 13e. Implement replica envelopes, legacy bootstrap, per-installation
       persistence, and vault-file reconciliation through one serialized
@@ -118,6 +118,8 @@ available through BRAT, and the synchronization design now uses ordinary
 `Miller Tasks/Sync/<replica-id>.json` files rather than one replaceable
 `data.json`. Each installation writes only its own file; causal version vectors
 let the existing schema-v3 field merge distinguish sequential edits from true
-conflicts after restart. Next, replace snapshot Undo/Redo with freshly
-versioned inverse operations before connecting replica persistence, while the
-beta receives physical iPhone QA.
+conflicts after restart. Checkpoint 13d is also complete: Undo/Redo now applies
+fresh atomic field, tombstone, and existence versions instead of restoring
+obsolete sync metadata. Next, implement the replica envelope, conservative
+legacy bootstrap, and per-installation persistence while the beta receives
+physical iPhone QA.

@@ -7,9 +7,10 @@ Implementation status: checkpoint 13b makes schema v3 the local runtime
 persistence format, and checkpoint 14a enables the responsive mobile beta.
 Schema-v1/v2 migration, canonical serialization, stable position keys, logical
 field versions, tombstone visibility, deterministic daily occurrence IDs, and
-the legacy-compatible UI materializer are active. Per-installation replica
-files, causal merge coordination, and operation-based Undo/Redo remain the
-next synchronization work.
+the legacy-compatible UI materializer are active. Undo/Redo now applies fresh
+atomic field, tombstone, and intentional-presence versions. Per-installation
+replica files and causal merge coordination remain the next synchronization
+work.
 
 ## Scope
 
@@ -509,7 +510,7 @@ therefore require upgrading the device with the complete task set first.
    deterministic migration, stable positions, and versioned runtime store.
 2. Keep the completed responsive mobile beta available for single-device
    testing.
-3. Make Undo/Redo emit freshly versioned inverse operations.
+3. Keep the completed freshly versioned Undo/Redo inverse operations.
 4. Add the replica envelope, stable installation identity, version vectors,
    causal field-merge tests, legacy bootstrap, and one-file-per-installation
    persistence.

@@ -406,6 +406,130 @@ describe("TaskStore", () => {
     expect(store.getSnapshot().showCompleted).toBe(true);
   });
 
+  it("versions undo and redo as new atomic field changes", () => {
+    let now = 1_000;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => "history-task",
+        now: () => ++now,
+        actorId: "desktop",
+      },
+    );
+    const task = store.createTask({ title: "Original" });
+    store.updateTask(task.id, { description: "Edited" });
+
+    expect(store.undo()?.taskId).toBe(task.id);
+    const undone = store.getSyncSnapshot();
+    expect(undone.clock).toBe(3);
+    expect(undone.tasks[0]?.description).toBe("");
+    expect(undone.tasks[0]?.fieldVersions.description).toEqual({
+      counter: 3,
+      actorId: "desktop",
+    });
+    expect(undone.tasks[0]?.fieldVersions.title).toEqual({
+      counter: 1,
+      actorId: "desktop",
+    });
+
+    expect(store.redo()?.taskId).toBe(task.id);
+    const redone = store.getSyncSnapshot();
+    expect(redone.clock).toBe(4);
+    expect(redone.tasks[0]?.description).toBe("Edited");
+    expect(redone.tasks[0]?.fieldVersions.description).toEqual({
+      counter: 4,
+      actorId: "desktop",
+    });
+    expect(redone.tasks[0]?.fieldVersions.title).toEqual({
+      counter: 1,
+      actorId: "desktop",
+    });
+  });
+
+  it("uses fresh tombstones and existence versions for history", () => {
+    let now = 1_000;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => "created-task",
+        now: () => ++now,
+        actorId: "mobile",
+      },
+    );
+    const task = store.createTask({ title: "Temporary" });
+
+    store.undo();
+    const undone = store.getSyncSnapshot();
+    expect(store.getTask(task.id)).toBeUndefined();
+    expect(undone.clock).toBe(2);
+    expect(undone.entityTombstones[0]?.deleted).toEqual({
+      counter: 2,
+      actorId: "mobile",
+    });
+
+    store.redo();
+    const redone = store.getSyncSnapshot();
+    const resurrected = redone.tasks[0]!;
+    expect(store.getTask(task.id)?.title).toBe("Temporary");
+    expect(redone.clock).toBe(3);
+    expect(resurrected.existence).toEqual({
+      counter: 3,
+      actorId: "mobile",
+    });
+    expect(
+      new Set(
+        Object.values(resurrected.fieldVersions).map(
+          (version) => `${version.counter}:${version.actorId}`,
+        ),
+      ),
+    ).toEqual(new Set(["3:mobile"]));
+  });
+
+  it("reverses subtree deletion with fresh shared versions", () => {
+    let id = 0;
+    const store = new TaskStore(
+      createDefaultPluginData(),
+      undefined,
+      {
+        idFactory: () => `history-delete-${++id}`,
+        now: () => id,
+        actorId: "desktop",
+      },
+    );
+    const parent = store.createTask({ title: "Parent" });
+    const child = store.createTask({
+      parentId: parent.id,
+      title: "Child",
+    });
+    store.deleteSubtree(parent.id);
+
+    store.undo();
+    const restored = store.getSyncSnapshot();
+    expect(store.getTask(parent.id)).toBeDefined();
+    expect(store.getTask(child.id)).toBeDefined();
+    expect(
+      restored.tasks.map((task) => task.existence),
+    ).toEqual([
+      { counter: 4, actorId: "desktop" },
+      { counter: 4, actorId: "desktop" },
+    ]);
+
+    store.redo();
+    const deletedAgain = store.getSyncSnapshot();
+    expect(store.getTask(parent.id)).toBeUndefined();
+    expect(store.getTask(child.id)).toBeUndefined();
+    expect(
+      deletedAgain.entityTombstones.map(
+        (tombstone) => tombstone.deleted,
+      ),
+    ).toEqual([
+      { counter: 5, actorId: "desktop" },
+      { counter: 5, actorId: "desktop" },
+    ]);
+  });
+
   it("clears unsafe history when image files or rollover change", () => {
     const store = createStore();
     const task = store.createTask({ title: "With image" });

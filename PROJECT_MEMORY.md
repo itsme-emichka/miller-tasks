@@ -14,7 +14,8 @@ can resume without reconstructing architecture or product decisions.
 ## Current state
 
 - Latest checkpoints: 14a responsive mobile beta, 14b BRAT beta distribution,
-  and 13c free replica transport revision complete.
+  13c free replica transport revision, and 13d freshly versioned Undo/Redo
+  complete.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -23,9 +24,9 @@ can resume without reconstructing architecture or product decisions.
 - Mobile beta: enabled with `isDesktopOnly: false`.
 - Distribution: GitHub prerelease `0.1.0` provides `main.js`, `manifest.json`,
   and `styles.css` for installation through Obsidian42 - BRAT.
-- Next work: checkpoint 13d, replacing snapshot-restoring Undo/Redo with
-  freshly versioned inverse operations before replica persistence is
-  connected, plus checkpoint 14c physical iPhone QA.
+- Next work: checkpoint 13e, implementing replica envelopes, conservative
+  legacy bootstrap, per-installation persistence, and vault-file
+  reconciliation, plus checkpoint 14c physical iPhone QA.
 
 The plugin validates schema v3 or deterministically migrates schema-v1/schema-v2
 task data before registering views.
@@ -106,6 +107,10 @@ MillerTasksPlugin
   data through deterministic migration.
 - `src/sync/positionKey.ts` creates stable lexicographic keys before, between,
   and after siblings without rewriting neighboring records.
+- Undo/Redo retains bounded in-memory before/after targets, but it no longer
+  replaces live schema-v3 data with those targets. History application writes
+  fresh versions only for changed atomic fields and uses new entity tombstone
+  or intentional-presence versions for create/delete reversal.
 - `src/sync/materializeSyncData.ts` derives the unchanged schema-v2-shaped view
   snapshot, including contiguous display-only `order` values, from schema-v3
   persistence.
@@ -328,9 +333,9 @@ At the end of every checkpoint:
 - Compact touch scrolling intentionally takes priority over row dragging.
   Mobile reordering needs a dedicated gesture or handle that does not block
   horizontal column swipes.
-- Undo/Redo still restores full schema-v3 snapshots as a pre-sync transition.
-  Checkpoint 13d must replace this with freshly versioned inverse
-  operations before external merges are accepted.
+- Undo/Redo now writes fresh schema-v3 field, tombstone, and existence
+  versions. History is still cleared by rollover and filesystem-backed image
+  operations, and future material incoming replica merges must also clear it.
 
 ## Checkpoint 1 verification
 
@@ -914,3 +919,25 @@ horizontal viewport.
 - The beta is intended for physical iPhone interface QA with test tasks.
   Publishing the release does not claim that Mac task data already
   synchronizes to the phone.
+
+## Checkpoint 13d freshly versioned Undo/Redo
+
+- Undo/Redo no longer assigns a stored schema-v3 snapshot to the live store.
+  Its bounded in-memory targets are applied as new local mutations.
+- Atomic task, template, and daily-occurrence field groups receive a fresh
+  local version only when their values actually change. Unrelated field
+  versions remain untouched.
+- Undoing creation writes a new entity tombstone. Redoing creation restores
+  the same stable ID with fresh existence and field versions.
+- Undoing safe deletion similarly restores the original entity with fresh
+  intentional-presence and field versions. Image-backed deletion remains a
+  history barrier.
+- Completed visibility remains a local presentation preference and is not
+  changed by task history application.
+- Every Undo/Redo result still enters the serialized persistence queue,
+  notifies all views, preserves the existing 100-entry/session-only behavior,
+  and advances the schema-v3 clock monotonically.
+- One hundred six tests across nineteen files pass, including fresh-version,
+  tombstone, resurrection, and persistence assertions.
+- Next checkpoint 13e connects the per-installation replica envelope and
+  conservative legacy bootstrap.

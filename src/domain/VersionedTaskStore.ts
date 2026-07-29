@@ -131,7 +131,7 @@ export class TaskStore {
     }
 
     this.redoStack.push(entry);
-    this.restoreHistorySnapshot(entry.before);
+    this.applyHistoryTarget(entry.before);
     return {
       label: entry.label,
       taskId: entry.taskId,
@@ -145,7 +145,7 @@ export class TaskStore {
     }
 
     this.undoStack.push(entry);
-    this.restoreHistorySnapshot(entry.after);
+    this.applyHistoryTarget(entry.after);
     return {
       label: entry.label,
       taskId: entry.taskId,
@@ -1106,16 +1106,226 @@ export class TaskStore {
     this.notifyAndPersist();
   }
 
-  private restoreHistorySnapshot(snapshot: PluginDataV3): void {
-    const showCompleted = this.data.showCompleted;
-    const showCompletedVersion = this.data.showCompletedVersion;
-    const clock = this.data.clock;
-    this.data = clonePluginDataV3(snapshot);
-    this.data.showCompleted = showCompleted;
-    this.data.showCompletedVersion = cloneVersion(showCompletedVersion);
-    this.data.clock = Math.max(clock, this.data.clock);
+  private applyHistoryTarget(target: PluginDataV3): void {
+    const timestamp = this.now();
+    const version = this.nextVersion();
+
+    this.applyTaskHistoryTarget(target, timestamp, version);
+    this.applyDailyTemplateHistoryTarget(
+      target,
+      timestamp,
+      version,
+    );
+    this.applyDailyOccurrenceHistoryTarget(
+      target,
+      timestamp,
+      version,
+    );
     this.historyBaseline = clonePluginDataV3(this.data);
     this.notifyAndPersist();
+  }
+
+  private applyTaskHistoryTarget(
+    target: PluginDataV3,
+    timestamp: number,
+    version: VersionStamp,
+  ): void {
+    const currentById = new Map(
+      this.data.tasks.map((task) => [task.id, task]),
+    );
+    const targetById = new Map(
+      target.tasks.map((task) => [task.id, task]),
+    );
+
+    for (const id of unionIds(currentById, targetById)) {
+      let current = currentById.get(id);
+      const desired = targetById.get(id);
+      const currentIsPresent =
+        current !== undefined &&
+        isEntityPresent(this.data, "task", id);
+      const desiredIsPresent =
+        desired !== undefined &&
+        isEntityPresent(target, "task", id);
+
+      if (!desiredIsPresent || !desired) {
+        if (currentIsPresent) {
+          this.tombstoneEntity("task", id, version, timestamp);
+        }
+        continue;
+      }
+
+      if (!current) {
+        current = cloneTaskForHistory(desired, version, timestamp);
+        this.data.tasks.push(current);
+        currentById.set(id, current);
+        continue;
+      }
+
+      if (!currentIsPresent) {
+        restoreTaskForHistory(
+          current,
+          desired,
+          version,
+          timestamp,
+        );
+        continue;
+      }
+
+      if (applyTaskFieldHistory(current, desired, version)) {
+        current.updatedAt = timestamp;
+      }
+    }
+  }
+
+  private applyDailyTemplateHistoryTarget(
+    target: PluginDataV3,
+    timestamp: number,
+    version: VersionStamp,
+  ): void {
+    const currentById = new Map(
+      this.data.dailyTemplates.map((template) => [
+        template.id,
+        template,
+      ]),
+    );
+    const targetById = new Map(
+      target.dailyTemplates.map((template) => [
+        template.id,
+        template,
+      ]),
+    );
+
+    for (const id of unionIds(currentById, targetById)) {
+      let current = currentById.get(id);
+      const desired = targetById.get(id);
+      const currentIsPresent =
+        current !== undefined &&
+        isEntityPresent(this.data, "daily-template", id);
+      const desiredIsPresent =
+        desired !== undefined &&
+        isEntityPresent(target, "daily-template", id);
+
+      if (!desiredIsPresent || !desired) {
+        if (currentIsPresent) {
+          this.tombstoneEntity(
+            "daily-template",
+            id,
+            version,
+            timestamp,
+          );
+        }
+        continue;
+      }
+
+      if (!current) {
+        current = cloneDailyTemplateForHistory(
+          desired,
+          version,
+          timestamp,
+        );
+        this.data.dailyTemplates.push(current);
+        currentById.set(id, current);
+        continue;
+      }
+
+      if (!currentIsPresent) {
+        restoreDailyTemplateForHistory(
+          current,
+          desired,
+          version,
+          timestamp,
+        );
+        continue;
+      }
+
+      let changed = false;
+      if (current.title !== desired.title) {
+        current.title = desired.title;
+        current.fieldVersions.title = cloneVersion(version);
+        changed = true;
+      }
+      if (current.positionKey !== desired.positionKey) {
+        current.positionKey = desired.positionKey;
+        current.fieldVersions.position = cloneVersion(version);
+        changed = true;
+      }
+      if (changed) {
+        current.updatedAt = timestamp;
+      }
+    }
+  }
+
+  private applyDailyOccurrenceHistoryTarget(
+    target: PluginDataV3,
+    timestamp: number,
+    version: VersionStamp,
+  ): void {
+    const currentById = new Map(
+      this.data.dailyOccurrences.map((occurrence) => [
+        occurrence.id,
+        occurrence,
+      ]),
+    );
+    const targetById = new Map(
+      target.dailyOccurrences.map((occurrence) => [
+        occurrence.id,
+        occurrence,
+      ]),
+    );
+
+    for (const id of unionIds(currentById, targetById)) {
+      let current = currentById.get(id);
+      const desired = targetById.get(id);
+      const currentIsPresent =
+        current !== undefined &&
+        isEntityPresent(this.data, "daily-occurrence", id);
+      const desiredIsPresent =
+        desired !== undefined &&
+        isEntityPresent(target, "daily-occurrence", id);
+
+      if (!desiredIsPresent || !desired) {
+        if (currentIsPresent) {
+          this.tombstoneEntity(
+            "daily-occurrence",
+            id,
+            version,
+            timestamp,
+          );
+        }
+        continue;
+      }
+
+      if (!current) {
+        current = cloneDailyOccurrenceForHistory(
+          desired,
+          version,
+          timestamp,
+        );
+        this.data.dailyOccurrences.push(current);
+        currentById.set(id, current);
+        continue;
+      }
+
+      if (!currentIsPresent) {
+        restoreDailyOccurrenceForHistory(
+          current,
+          desired,
+          version,
+          timestamp,
+        );
+        continue;
+      }
+
+      if (
+        applyDailyOccurrenceFieldHistory(
+          current,
+          desired,
+          version,
+        )
+      ) {
+        current.updatedAt = timestamp;
+      }
+    }
   }
 
   private notifyAndPersist(): void {
@@ -1245,6 +1455,259 @@ export class TaskStore {
       `Task not found: ${id}`,
     );
   }
+}
+
+function unionIds<T>(
+  left: ReadonlyMap<string, T>,
+  right: ReadonlyMap<string, T>,
+): Set<string> {
+  return new Set([...left.keys(), ...right.keys()]);
+}
+
+function cloneTaskForHistory(
+  desired: SyncedTask,
+  version: VersionStamp,
+  timestamp: number,
+): SyncedTask {
+  return {
+    ...desired,
+    tags: [...desired.tags],
+    attachments: desired.attachments.map((attachment) => ({
+      ...attachment,
+      added: cloneVersion(attachment.added),
+    })),
+    updatedAt: timestamp,
+    existence: cloneVersion(version),
+    fieldVersions: createTaskFieldVersions(version),
+  };
+}
+
+function restoreTaskForHistory(
+  current: SyncedTask,
+  desired: SyncedTask,
+  version: VersionStamp,
+  timestamp: number,
+): void {
+  current.parentId = desired.parentId;
+  current.positionKey = desired.positionKey;
+  current.title = desired.title;
+  current.completed = desired.completed;
+  current.description = desired.description;
+  current.tags = [...desired.tags];
+  current.dueDate = desired.dueDate;
+  current.dueTime = desired.dueTime;
+  current.priority = desired.priority;
+  current.flagged = desired.flagged;
+  current.url = desired.url;
+  current.attachments = desired.attachments.map((attachment) => ({
+    ...attachment,
+    added: cloneVersion(attachment.added),
+  }));
+  current.createdAt = desired.createdAt;
+  current.updatedAt = timestamp;
+  current.completedAt = desired.completedAt;
+  current.today = desired.today;
+  current.todayAddedAt = desired.todayAddedAt;
+  current.existence = cloneVersion(version);
+  current.fieldVersions = createTaskFieldVersions(version);
+}
+
+function applyTaskFieldHistory(
+  current: SyncedTask,
+  desired: SyncedTask,
+  version: VersionStamp,
+): boolean {
+  let changed = false;
+  if (current.title !== desired.title) {
+    current.title = desired.title;
+    current.fieldVersions.title = cloneVersion(version);
+    changed = true;
+  }
+  if (current.description !== desired.description) {
+    current.description = desired.description;
+    current.fieldVersions.description = cloneVersion(version);
+    changed = true;
+  }
+  if (!sameStrings(current.tags, desired.tags)) {
+    current.tags = [...desired.tags];
+    current.fieldVersions.tags = cloneVersion(version);
+    changed = true;
+  }
+  if (
+    current.dueDate !== desired.dueDate ||
+    current.dueTime !== desired.dueTime
+  ) {
+    current.dueDate = desired.dueDate;
+    current.dueTime = desired.dueTime;
+    current.fieldVersions.due = cloneVersion(version);
+    changed = true;
+  }
+  if (current.priority !== desired.priority) {
+    current.priority = desired.priority;
+    current.fieldVersions.priority = cloneVersion(version);
+    changed = true;
+  }
+  if (current.flagged !== desired.flagged) {
+    current.flagged = desired.flagged;
+    current.fieldVersions.flag = cloneVersion(version);
+    changed = true;
+  }
+  if (current.url !== desired.url) {
+    current.url = desired.url;
+    current.fieldVersions.url = cloneVersion(version);
+    changed = true;
+  }
+  if (
+    current.completed !== desired.completed ||
+    current.completedAt !== desired.completedAt
+  ) {
+    current.completed = desired.completed;
+    current.completedAt = desired.completedAt;
+    current.fieldVersions.completion = cloneVersion(version);
+    changed = true;
+  }
+  if (
+    current.today !== desired.today ||
+    current.todayAddedAt !== desired.todayAddedAt
+  ) {
+    current.today = desired.today;
+    current.todayAddedAt = desired.todayAddedAt;
+    current.fieldVersions.today = cloneVersion(version);
+    changed = true;
+  }
+  if (
+    current.parentId !== desired.parentId ||
+    current.positionKey !== desired.positionKey
+  ) {
+    current.parentId = desired.parentId;
+    current.positionKey = desired.positionKey;
+    current.fieldVersions.structure = cloneVersion(version);
+    changed = true;
+  }
+  return changed;
+}
+
+function cloneDailyTemplateForHistory(
+  desired: SyncedDailyTemplate,
+  version: VersionStamp,
+  timestamp: number,
+): SyncedDailyTemplate {
+  return {
+    ...desired,
+    updatedAt: timestamp,
+    existence: cloneVersion(version),
+    fieldVersions: {
+      title: cloneVersion(version),
+      position: cloneVersion(version),
+    },
+  };
+}
+
+function restoreDailyTemplateForHistory(
+  current: SyncedDailyTemplate,
+  desired: SyncedDailyTemplate,
+  version: VersionStamp,
+  timestamp: number,
+): void {
+  current.title = desired.title;
+  current.positionKey = desired.positionKey;
+  current.createdAt = desired.createdAt;
+  current.updatedAt = timestamp;
+  current.existence = cloneVersion(version);
+  current.fieldVersions = {
+    title: cloneVersion(version),
+    position: cloneVersion(version),
+  };
+}
+
+function cloneDailyOccurrenceForHistory(
+  desired: SyncedDailyOccurrence,
+  version: VersionStamp,
+  timestamp: number,
+): SyncedDailyOccurrence {
+  return {
+    ...desired,
+    tags: [...desired.tags],
+    updatedAt: timestamp,
+    existence: cloneVersion(version),
+    fieldVersions: createOccurrenceFieldVersions(version),
+  };
+}
+
+function restoreDailyOccurrenceForHistory(
+  current: SyncedDailyOccurrence,
+  desired: SyncedDailyOccurrence,
+  version: VersionStamp,
+  timestamp: number,
+): void {
+  current.templateId = desired.templateId;
+  current.date = desired.date;
+  current.completed = desired.completed;
+  current.description = desired.description;
+  current.tags = [...desired.tags];
+  current.dueDate = desired.dueDate;
+  current.dueTime = desired.dueTime;
+  current.priority = desired.priority;
+  current.flagged = desired.flagged;
+  current.url = desired.url;
+  current.completedAt = desired.completedAt;
+  current.createdAt = desired.createdAt;
+  current.updatedAt = timestamp;
+  current.todayAddedAt = desired.todayAddedAt;
+  current.existence = cloneVersion(version);
+  current.fieldVersions = createOccurrenceFieldVersions(version);
+}
+
+function applyDailyOccurrenceFieldHistory(
+  current: SyncedDailyOccurrence,
+  desired: SyncedDailyOccurrence,
+  version: VersionStamp,
+): boolean {
+  let changed = false;
+  if (current.description !== desired.description) {
+    current.description = desired.description;
+    current.fieldVersions.description = cloneVersion(version);
+    changed = true;
+  }
+  if (!sameStrings(current.tags, desired.tags)) {
+    current.tags = [...desired.tags];
+    current.fieldVersions.tags = cloneVersion(version);
+    changed = true;
+  }
+  if (
+    current.dueDate !== desired.dueDate ||
+    current.dueTime !== desired.dueTime
+  ) {
+    current.dueDate = desired.dueDate;
+    current.dueTime = desired.dueTime;
+    current.fieldVersions.due = cloneVersion(version);
+    changed = true;
+  }
+  if (current.priority !== desired.priority) {
+    current.priority = desired.priority;
+    current.fieldVersions.priority = cloneVersion(version);
+    changed = true;
+  }
+  if (current.flagged !== desired.flagged) {
+    current.flagged = desired.flagged;
+    current.fieldVersions.flag = cloneVersion(version);
+    changed = true;
+  }
+  if (current.url !== desired.url) {
+    current.url = desired.url;
+    current.fieldVersions.url = cloneVersion(version);
+    changed = true;
+  }
+  if (
+    current.completed !== desired.completed ||
+    current.completedAt !== desired.completedAt
+  ) {
+    current.completed = desired.completed;
+    current.completedAt = desired.completedAt;
+    current.fieldVersions.completion = cloneVersion(version);
+    changed = true;
+  }
+  return changed;
 }
 
 function createTaskFieldVersions(

@@ -150,9 +150,11 @@ completed row remains visible and struck through until the next local day.
 Undo/redo keeps up to 100 changes for the current plugin session, including
 creation, edits, completion, Today scheduling, moves, ordering, and safe
 deletion. The history is intentionally not stored in `data.json`, so it does
-not become shared task data. A plugin reload, daily rollover, or an image file
-operation starts a fresh history because Obsidian's trash cannot guarantee
-that an image can be restored to its original vault path.
+not become shared task data. Undo and redo write fresh field, deletion, and
+intentional-presence versions rather than restoring an older database
+snapshot. A plugin reload, daily rollover, or an image file operation starts a
+fresh history because Obsidian's trash cannot guarantee that an image can be
+restored to its original vault path.
 
 ## Data and files
 
