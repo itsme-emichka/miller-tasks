@@ -19,7 +19,8 @@ can resume without reconstructing architecture or product decisions.
   Checkpoint 13g1 validates the first physical Dropbox/Remotely Save
   macOS-to-iPhone matrix. Checkpoint 14a1 moves compact Today into a draggable
   bottom sheet over full-height Miller columns, and checkpoint 14a2 keeps that
-  sheet above Obsidian's navbar while containing mobile gestures.
+  sheet above Obsidian's navbar while containing mobile gestures. Checkpoint
+  14a3 replaces single-line ellipsis with growing multi-line task rows.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -1136,3 +1137,14 @@ horizontal viewport.
 - The release changes mobile chrome clearance and gesture ownership only.
   Desktop presentation, task data, replica synchronization, and the
   device-local Undo/Redo boundary remain unchanged.
+
+## Checkpoint 14a3 multi-line task rows
+
+- Task titles in Miller columns and Today use normal wrapping plus
+  `overflow-wrap: anywhere`, so long words and narrow phone columns grow to
+  additional lines instead of ending in an ellipsis.
+- Rows align their checkbox and Today action with the first line. Today parent
+  context remains a separate quiet line, and Tree View retains its fixed
+  one-line node geometry until tree measurement supports variable heights.
+- This checkpoint changes presentation only; task titles, selection,
+  drag-and-drop, persistence, and synchronization data are unchanged.

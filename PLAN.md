@@ -92,6 +92,9 @@ automatically while all checks are green.
 - [x] 14a2. Keep the compact Today sheet above Obsidian's measured mobile
       navbar and contain Today/hierarchy touch gestures so they cannot invoke
       the command palette or mobile sidebars.
+- [x] 14a3. Let task titles wrap to additional lines in Miller columns and
+      Today while keeping each checkbox and Today control aligned to the first
+      line.
 - [x] 14b. Publish an installable `0.1.0` GitHub beta release with the three
       Obsidian assets so the mobile build can be installed through BRAT.
 - [x] 14b1. Publish the replica-synchronization beta as GitHub prerelease

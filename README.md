@@ -41,6 +41,7 @@ columns, and the same background as the active Obsidian theme.
   screen.
 - Keep the Today handle above Obsidian's mobile navigation bar and reserve
   hierarchy swipes for Miller column scrolling instead of outer app gestures.
+- Wrap long task titles onto additional lines in Miller columns and Today.
 - Hide completed Today tasks by default in compact mode and reveal them from
   one small disclosure inside the expanded sheet.
 
