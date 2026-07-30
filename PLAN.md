@@ -104,6 +104,8 @@ automatically while all checks are green.
       expanded Today sheet with create, rename, and confirmed delete support.
 - [x] 14a7. Center row checkboxes and Today controls against the complete
       wrapped title block instead of pinning them to its first line.
+- [x] 14a8. Move compact daily-template editing from the keyboard-sensitive
+      Today sheet into a dedicated safe-area native modal.
 - [x] 14b. Publish an installable `0.1.0` GitHub beta release with the three
       Obsidian assets so the mobile build can be installed through BRAT.
 - [x] 14b1. Publish the replica-synchronization beta as GitHub prerelease

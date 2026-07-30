@@ -304,17 +304,15 @@ describe("MillerTasksApp", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("edits daily tasks inside the compact Today sheet", () => {
+  it("requests the dedicated daily editor from compact Today", () => {
     const store = createStore();
-    const template = store.createDailyTemplate("Morning review");
-    const deleteTemplate = vi.fn(async (templateId: string) => {
-      store.deleteDailyTemplate(templateId);
-    });
+    store.createDailyTemplate("Morning review");
+    const requestDailyTasks = vi.fn();
     render(
       <MillerTasksApp
         store={store}
         compactLayout
-        dailyTemplateActions={{ deleteTemplate }}
+        onDailyTasksRequested={requestDailyTasks}
       />,
     );
     const today = screen.getByRole("region", {
@@ -329,41 +327,15 @@ describe("MillerTasksApp", () => {
       name: "Edit daily tasks",
     });
 
-    expect(editDailyTasks).toHaveAttribute("aria-expanded", "false");
     expect(
       within(today).queryByRole("region", { name: "Daily tasks" }),
     ).not.toBeInTheDocument();
     fireEvent.click(editDailyTasks);
 
-    expect(editDailyTasks).toHaveAttribute("aria-expanded", "true");
+    expect(requestDailyTasks).toHaveBeenCalledOnce();
     expect(
-      within(today).getByRole("region", { name: "Daily tasks" }),
-    ).toBeVisible();
-    const templateTitle = within(today).getByRole("textbox", {
-      name: "Daily task Morning review",
-    });
-    fireEvent.change(templateTitle, {
-      target: { value: "Morning plan" },
-    });
-    fireEvent.blur(templateTitle);
-    expect(store.getDailyTemplates()[0]?.title).toBe("Morning plan");
-    expect(
-      within(today).getByRole("button", { name: "Morning plan" }),
-    ).toBeVisible();
-
-    createThroughInput("New daily task", "Evening review");
-    expect(store.getDailyTemplates()).toHaveLength(2);
-    fireEvent.click(
-      within(today).getByRole("button", {
-        name: "Delete daily task Morning plan",
-      }),
-    );
-
-    expect(deleteTemplate).toHaveBeenCalledWith(
-      template.id,
-      "Morning plan",
-    );
-    expect(store.getDailyTemplates()).toHaveLength(1);
+      within(today).queryByRole("region", { name: "Daily tasks" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens and closes the compact Today sheet by swipe", () => {

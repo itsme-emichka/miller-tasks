@@ -32,6 +32,7 @@ import type {
 } from "./ui/MillerTasksApp";
 import type { TaskActions } from "./ui/taskActions";
 import { requestConfirmation } from "./view/ConfirmationModal";
+import { MillerDailyTasksModal } from "./view/MillerDailyTasksModal";
 import { MillerTaskInspectorModal } from "./view/MillerTaskInspectorModal";
 import { MillerTaskInspectorView } from "./view/MillerTaskInspectorView";
 import { MillerTaskTreeView } from "./view/MillerTaskTreeView";
@@ -48,6 +49,7 @@ export default class MillerTasksPlugin extends Plugin {
   private taskDrafts: TaskDraftBuffer | null = null;
   private attachmentService: TaskAttachmentService | null = null;
   private inspectorModal: MillerTaskInspectorModal | null = null;
+  private dailyTasksModal: MillerDailyTasksModal | null = null;
   private inspectorActions: InspectorActions | null = null;
   private replicaPersistence: ReplicaPersistence | null = null;
   private replicaReconcileTimer: number | null = null;
@@ -175,7 +177,9 @@ export default class MillerTasksPlugin extends Plugin {
             reportMoveError: (message) => {
               new Notice(message);
             },
-            dailyTemplateActions: inspectorActions.dailyTemplates,
+            openDailyTasks: () => {
+              this.openDailyTasksPopup();
+            },
           },
         ),
     );
@@ -458,6 +462,8 @@ export default class MillerTasksPlugin extends Plugin {
     }
     this.inspectorModal?.close();
     this.inspectorModal = null;
+    this.dailyTasksModal?.close();
+    this.dailyTasksModal = null;
     this.taskDrafts?.flushAll();
     void this.taskStore?.flush().catch(() => undefined);
   }
@@ -494,6 +500,7 @@ export default class MillerTasksPlugin extends Plugin {
     }
 
     this.updateTaskSelection(taskId);
+    this.dailyTasksModal?.close();
     this.inspectorModal?.close();
     const modal = new MillerTaskInspectorModal(
       this.app,
@@ -513,6 +520,29 @@ export default class MillerTasksPlugin extends Plugin {
     modal.open();
   }
 
+  private openDailyTasksPopup(): void {
+    const taskStore = this.taskStore;
+    const actions = this.inspectorActions;
+    if (!taskStore || !actions) {
+      return;
+    }
+
+    this.inspectorModal?.close();
+    this.dailyTasksModal?.close();
+    const modal = new MillerDailyTasksModal(
+      this.app,
+      taskStore,
+      actions.dailyTemplates,
+      () => {
+        if (this.dailyTasksModal === modal) {
+          this.dailyTasksModal = null;
+        }
+      },
+    );
+    this.dailyTasksModal = modal;
+    modal.open();
+  }
+
   private setCompactLayout(compact: boolean): void {
     this.compactLayout = compact;
     if (compact) {
@@ -524,6 +554,7 @@ export default class MillerTasksPlugin extends Plugin {
       return;
     }
     this.inspectorModal?.close();
+    this.dailyTasksModal?.close();
   }
 
   private undoTaskChange(): boolean {

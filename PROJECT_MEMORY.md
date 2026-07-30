@@ -24,7 +24,8 @@ can resume without reconstructing architecture or product decisions.
   checkpoint 14a4 constrains the compact inspector to the mobile safe area.
   Checkpoint 14a5 adds the Today completed-task disclosure on desktop, and
   checkpoint 14a6 exposes daily-template editing inside compact Today.
-  Checkpoint 14a7 centers row controls against wrapped titles.
+  Checkpoint 14a7 centers row controls against wrapped titles, and checkpoint
+  14a8 moves the compact daily editor into a keyboard-safe modal.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -1214,3 +1215,19 @@ horizontal viewport.
 - This supersedes checkpoint 14a3's first-line alignment after physical
   iPhone QA showed that it looked detached from two- and three-line titles.
   Wrapping, selection, completion, and task data remain unchanged.
+
+## Checkpoint 14a8 keyboard-safe compact daily editor
+
+- `Edit daily tasks` remains the first action inside expanded compact Today,
+  but now opens a dedicated native `Daily tasks` modal instead of inserting
+  text fields into the bottom sheet.
+- The modal subtracts mobile safe areas from its dynamic viewport height and
+  owns vertical scrolling. Daily inputs have phone-sized touch targets and
+  scroll margins, allowing iOS to keep the focused field visible when its
+  keyboard replaces the lower visual viewport.
+- `DailyTasksApp` subscribes to the live store and reuses `DailyTasksEditor`
+  plus the same confirmed-delete action as desktop. Opening task details and
+  leaving compact layout close the daily modal cleanly.
+- Two focused surfaces verify the Today launch action and live create, rename,
+  and delete updates in the dedicated editor. This supersedes checkpoint
+  14a6's inline editor placement without changing daily-template data.

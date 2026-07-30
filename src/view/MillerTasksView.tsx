@@ -8,7 +8,6 @@ import { createRoot, Root } from "react-dom/client";
 
 import { MILLER_TASKS_VIEW_TYPE } from "../constants";
 import { TaskStore } from "../domain/TaskStore";
-import type { DailyTemplateActions } from "../ui/dailyTemplateActions";
 import { MillerTasksApp } from "../ui/MillerTasksApp";
 import type { TaskInspectorPresentation } from "../ui/MillerTasksApp";
 
@@ -22,7 +21,7 @@ interface MillerTasksActions {
   completeTask: (taskId: string, completed: boolean) => void;
   deleteTask: (taskId: string) => void;
   reportMoveError: (message: string) => void;
-  dailyTemplateActions: DailyTemplateActions;
+  openDailyTasks: () => void;
 }
 
 export class MillerTasksView extends ItemView {
@@ -65,7 +64,7 @@ export class MillerTasksView extends ItemView {
           onTaskCompletion={this.actions.completeTask}
           onTaskDelete={this.actions.deleteTask}
           onTaskMoveError={this.actions.reportMoveError}
-          dailyTemplateActions={this.actions.dailyTemplateActions}
+          onDailyTasksRequested={this.actions.openDailyTasks}
           compactLayout={Platform.isPhone ? true : undefined}
         />
       </StrictMode>,
