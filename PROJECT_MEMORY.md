@@ -25,7 +25,8 @@ can resume without reconstructing architecture or product decisions.
   Checkpoint 14a5 adds the Today completed-task disclosure on desktop, and
   checkpoint 14a6 exposes daily-template editing inside compact Today.
   Checkpoint 14a7 centers row controls against wrapped titles, and checkpoint
-  14a8 moves the compact daily editor into a keyboard-safe modal.
+  14a8 moves the compact daily editor into a keyboard-safe modal. Checkpoint
+  14a9 removes the compact next-column preview.
 - Git branch: `main`.
 - GitHub repository: `https://github.com/itsme-emichka/miller-tasks`.
 - Plugin ID: `miller-tasks`.
@@ -1231,3 +1232,15 @@ horizontal viewport.
 - Two focused surfaces verify the Today launch action and live create, rename,
   and delete updates in the dedicated editor. This supersedes checkpoint
   14a6's inline editor placement without changing daily-template data.
+
+## Checkpoint 14a9 full-width compact columns
+
+- Compact `--miller-column-width` is exactly `100%`, so one root or child
+  column fills the Miller viewport and no checkbox or Today control from the
+  neighboring level remains visible at rest.
+- Horizontal movement remains a direct finger-driven scroll. Mandatory snap
+  settles that manual gesture on a complete column; selection still never
+  calls `scrollIntoView()` or changes the viewport automatically.
+- Desktop-width Miller columns retain their clamped width and multi-column
+  presentation. This supersedes the intentional next-level preview from
+  checkpoints 14a and 14a1 after physical iPhone feedback found it unnecessary.

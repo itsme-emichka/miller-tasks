@@ -106,6 +106,9 @@ automatically while all checks are green.
       wrapped title block instead of pinning them to its first line.
 - [x] 14a8. Move compact daily-template editing from the keyboard-sensitive
       Today sheet into a dedicated safe-area native modal.
+- [x] 14a9. Make every compact Miller column exactly one viewport wide and
+      snap manual horizontal scrolling to complete columns without a
+      next-column preview.
 - [x] 14b. Publish an installable `0.1.0` GitHub beta release with the three
       Obsidian assets so the mobile build can be installed through BRAT.
 - [x] 14b1. Publish the replica-synchronization beta as GitHub prerelease
